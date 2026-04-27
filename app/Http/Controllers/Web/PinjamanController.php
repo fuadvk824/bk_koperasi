@@ -29,6 +29,13 @@ class PinjamanController extends Controller
                     })->orWhere('id', $request->search);
                 });
             })
+            ->when($request->statusUser, function ($q) use ($request) {
+                $q->where(function ($sub) use ($request) {
+                    $sub->whereHas('user', function ($u) use ($request) {
+                        $u->where('status', $request->statusUser);
+                    });
+                });
+            })
             ->when($request->status, function ($q) use ($request) {
                 $q->where('status', $request->status);
             })
@@ -62,6 +69,7 @@ class PinjamanController extends Controller
                 'end_date' => $request->end_date,
                 'status' => $request->status,
                 'office_id' => $request->office_id,
+                'statusUser' => $request->statusUser,
                 'perPage' => $perPage,
             ],
             'offices' => Office::select('id', 'name')->orderBy('name')->get(),

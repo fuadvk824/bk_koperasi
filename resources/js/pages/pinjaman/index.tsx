@@ -34,6 +34,8 @@ interface Props {
         end_date?: string;
         status?: string;
         office_id?: number;
+        statusUser?: string;
+        statusPinjaman: string
         perPage?: number;
     };
     users: Option[];
@@ -56,6 +58,8 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
         end_date: filters.end_date ?? '',
         status: filters.status,
         office_id: filters.office_id ?? '',
+        statusUser: filters.statusUser ?? '',
+
         perPage: filters.perPage ?? 10,
     });
 
@@ -68,7 +72,7 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, start_date: '', end_date: '', status: '', office_id: '' });
+        setLocalFilters({ search: '', perPage: 10, start_date: '', end_date: '', status: '', office_id: '', statusUser: '' });
         router.get(
             route('pinjaman.index'),
             {},
@@ -172,12 +176,12 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                             </Select>
                         </div>
                         <div>
-                            <Label>Status</Label>
+                            <Label>Status Pinjaman</Label>
                             <Select
                                 value={localFilters.status ?? 'all'}
                                 onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'status', value)}
                             >
-                                <SelectTrigger className="h-7 w-full  p-4">
+                                <SelectTrigger className="h-7 w-full p-4">
                                     <SelectValue placeholder="Pilih Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -188,15 +192,30 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                             </Select>
                         </div>
                         <div>
+                            <Label>Status Anggota</Label>
+                            <Select
+                                value={localFilters.statusUser ?? 'all'}
+                                onValueChange={(value) =>
+                                    handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)
+                                }
+                            >
+                                <SelectTrigger className="h-7 w-full p-4">
+                                    <SelectValue placeholder="Pilih Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Status</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
                             <Label>Periode Pinjaman</Label>
 
                             <div className="flex items-center gap-2">
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="h-7 flex-1 justify-start p-4 font-normal"
-                                        >
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
                                             <CalendarIcon className="mr-2 h-3 w-3" />
                                             {localFilters.start_date
                                                 ? format(new Date(localFilters.start_date), 'dd/MM/yyyy')
@@ -229,10 +248,7 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
 
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="h-7 flex-1 justify-start  p-4 font-normal"
-                                        >
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
                                             <CalendarIcon className="mr-2 h-3 w-3" />
                                             {localFilters.end_date
                                                 ? format(new Date(localFilters.end_date), 'dd/MM/yyyy')
@@ -260,7 +276,6 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                                 </Popover>
                             </div>
                         </div>
-                        
                     </div>
                 </div>
 

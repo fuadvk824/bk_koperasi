@@ -39,6 +39,7 @@ interface Props {
         jenis?: string;
         kategori?: string;
         office_id?: number;
+        statusUser: string;
     };
     users: Option[];
     offices: Option[];
@@ -61,6 +62,7 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
         jenis: filters.jenis,
         kategori: filters.kategori,
         office_id: filters.office_id ?? '',
+        statusUser: filters.statusUser ?? '',
     });
 
     const { handleFilterChange, handleExport } = useTableActions({
@@ -72,7 +74,7 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, jenis: '', kategori: '', office_id: '' });
+        setLocalFilters({ search: '', perPage: 10, jenis: '', kategori: '', office_id: '', statusUser: '' });
         router.get(
             route('transaksikas.index'),
             {},
@@ -194,6 +196,22 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
                                     <SelectItem value="pinjaman">Pinjaman</SelectItem>
                                     <SelectItem value="angsuran">Angsuran</SelectItem>
                                     <SelectItem value="mutasi">Mutasi</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label>Status Anggota</Label>
+                            <Select
+                                value={localFilters.statusUser ?? 'all'}
+                                onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)}
+                            >
+                                <SelectTrigger className="h-7 w-full p-4">
+                                    <SelectValue placeholder="Pilih Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Status</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

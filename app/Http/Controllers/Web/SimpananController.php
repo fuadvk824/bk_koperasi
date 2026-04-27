@@ -27,6 +27,13 @@ class SimpananController extends Controller
                     })->orWhere('id', $request->search);
                 });
             })
+            ->when($request->statusUser, function ($q) use ($request) {
+                $q->where(function ($sub) use ($request) {
+                    $sub->whereHas('user', function ($u) use ($request) {
+                        $u->where('status', $request->statusUser);
+                    });
+                });
+            })
             ->when($request->jenis, function ($q) use ($request) {
                 $q->where('jenis', $request->jenis);
             })
@@ -41,13 +48,13 @@ class SimpananController extends Controller
 
         $data = (clone $query)->orderBy('tanggal', 'desc')->paginate($perPage)->withQueryString();
 
-        $activeQuery = (clone $query)->whereHas('user', function ($q) {
-            $q->where('status', 'active');
-        });
+        // $activeQuery = (clone $query)->whereHas('user', function ($q) {
+        //     $q->where('status', 'active');
+        // });
 
-        $simpananWajib = (clone $activeQuery)->where('jenis', 'wajib')->sum('jumlah');
-        $simpananSukarela = (clone $activeQuery)->where('jenis', 'sukarela')->sum('jumlah');
-        $simpananModal = (clone $activeQuery)->where('jenis', 'modal')->sum('jumlah');
+        $simpananWajib = (clone $query)->where('jenis', 'wajib')->sum('jumlah');
+        $simpananSukarela = (clone $query)->where('jenis', 'sukarela')->sum('jumlah');
+        $simpananModal = (clone $query)->where('jenis', 'modal')->sum('jumlah');
         $totalSimpanan = $simpananWajib + $simpananSukarela + $simpananModal;
 
         return Inertia::render('simpanan/index', [
@@ -59,6 +66,7 @@ class SimpananController extends Controller
                 'end_date' => $request->end_date,
                 'office_id' => $request->office_id,
                 'jenis' => $request->jenis,
+                'statusUser' => $request->statusUser,
                 'perPage' => $perPage,
             ],
             'users' => User::select('id', 'name')->get(),

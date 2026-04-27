@@ -18,15 +18,22 @@ class BerandaController extends Controller
             $q->where('status', 'active');
         })->sum('jumlah');
         $angsuran = Angsuran::where('status', 'sudah_bayar')
+            ->whereHas('pinjaman', function ($q) {
+                $q->where('status', 'aktif');
+            })
+            ->where('status', 'sudah_bayar')
             ->whereHas('user', function ($q) {
                 $q->where('status', 'active');
             })
             ->sum('jumlah_bayar');
-        $totalSimpanan = $simpanan + $angsuran;
+        $mutasi = TransaksiKas::where('kategori', 'mutasi')->where('jenis', 'masuk')->sum('jumlah');
+        $totalSimpanan = $simpanan + $angsuran + $mutasi; //all simpanan (user active) + all angsuran sudah bayar dengan bunga
 
-        $totalPinjaman = Pinjaman::whereHas('user', function ($q) {
-            $q->where('status', 'active');
-        })->sum('jumlah_pinjaman');
+        $totalPinjaman = Pinjaman::where('status', 'aktif')
+            ->whereHas('user', function ($q) {
+                $q->where('status', 'active');
+            })
+            ->sum('jumlah_pinjaman');
 
         $sisaPinjaman = Pinjaman::whereHas('user', function ($q) {
             $q->where('status', 'active');
@@ -34,8 +41,10 @@ class BerandaController extends Controller
 
         $totalAnggota = DB::table('users')->where('status', 'active')->count();
 
-        $kasMasuk = TransaksiKas::where('jenis', 'masuk')->sum('jumlah');
-        $kasKeluar = TransaksiKas::where('jenis', 'keluar')->sum('jumlah');
+        $kasMasuk = TransaksiKas::where('jenis', 'masuk')
+        ->sum('jumlah');
+        $kasKeluar = TransaksiKas::where('jenis', 'keluar')
+        ->sum('jumlah');
         $saldoKas = $kasMasuk - $kasKeluar;
 
         $angsuranMenunggak = Angsuran::where('status', 'belum_bayar')

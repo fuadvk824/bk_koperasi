@@ -26,6 +26,13 @@ class TransaksiKasController extends Controller
                     })->orWhere('ref_id', $request->search);
                 });
             })
+             ->when($request->statusUser, function ($q) use ($request) {
+                $q->where(function ($sub) use ($request) {
+                    $sub->whereHas('user', function ($u) use ($request) {
+                        $u->where('status', $request->statusUser);
+                    });
+                });
+            })
             ->when($request->office_id, function ($q) use ($request) {
                 $q->whereHas('user', function ($u) use ($request) {
                     $u->where('office_id', $request->office_id);
@@ -56,6 +63,7 @@ class TransaksiKasController extends Controller
                 'perPage' => $perPage,
                 'jenis' => $request->jenis,
                 'kategori' => $request->kategori,
+                'statusUser' => $request->statusUser,
                 'office_id' => $request->office_id,
             ],
             'offices' => Office::select('id', 'name')->orderBy('name')->get(),

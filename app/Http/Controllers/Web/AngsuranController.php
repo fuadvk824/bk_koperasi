@@ -22,9 +22,8 @@ class AngsuranController extends Controller
         $perPage = $request->input('perPage', 10);
 
         $query = Angsuran::with('user:id,name,office_id')
-            ->whereHas('pinjaman', function ($q) {
-                $q->where('status', 'aktif'); 
-            })
+           
+           
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->whereHas('user', function ($u) use ($request) {
@@ -32,6 +31,7 @@ class AngsuranController extends Controller
                     })->orWhere('id', $request->search);
                 });
             })
+
             ->when($request->office_id, function ($q) use ($request) {
                 $q->whereHas('user', function ($u) use ($request) {
                     $u->where('office_id', $request->office_id);
@@ -50,13 +50,13 @@ class AngsuranController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        $activeQuery = (clone $query)->whereHas('user', function ($q) {
-            $q->where('status', 'active');
-        });
+        // $activeQuery = (clone $query)->whereHas('user', function ($q) {
+        //     $q->where('status', 'active');
+        // });
 
-        $totAngsJlnNoBunga = $activeQuery->sum('dana_pinjaman');
-        $totAngsJlnWithBunga = $activeQuery->sum('jumlah_bayar');
-        $keuntunganBunga = $activeQuery->sum('bunga_bayar');
+        $totAngsJlnNoBunga = (clone $query)->sum('dana_pinjaman');
+        $totAngsJlnWithBunga = (clone $query)->sum('jumlah_bayar');
+        $keuntunganBunga = (clone $query)->sum('bunga_bayar');
 
         return Inertia::render('angsuran/index', [
             'angsuran' => AngsuranResource::collection($data)->response()->getData(true),
@@ -66,6 +66,7 @@ class AngsuranController extends Controller
                 'end_date' => $request->end_date,
                 'status' => $request->status,
                 'office_id' => $request->office_id,
+                'statusPinjaman' => $request->statusPinjaman,
                 'perPage' => $perPage,
             ],
             'offices' => Office::select('id', 'name')->orderBy('name')->get(),

@@ -36,6 +36,7 @@ interface Props {
         end_date?: string;
         status?: string;
         office_id?: number;
+        statusPinjaman: string;
         perPage?: number;
     };
     offices: Option[];
@@ -62,6 +63,7 @@ export default function Index({
         end_date: filters.end_date ?? '',
         status: filters.status,
         office_id: filters.office_id ?? '',
+        statusPinjaman: filters.statusPinjaman ?? '',
         perPage: filters.perPage ?? 10,
     });
 
@@ -74,7 +76,15 @@ export default function Index({
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, start_date: '', end_date: '', status: '', office_id: '' });
+        setLocalFilters({
+            search: '',
+            perPage: 10,
+            start_date: '',
+            end_date: '',
+            status: '',
+            office_id: '',
+            statusPinjaman: '',
+        });
         router.get(
             route('angsuran.index'),
             {},
@@ -163,12 +173,12 @@ export default function Index({
                             </Select>
                         </div>
                         <div>
-                            <Label>Status</Label>
+                            <Label>Status Angsuran</Label>
                             <Select
                                 value={localFilters.status ?? 'all'}
                                 onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'status', value)}
                             >
-                                <SelectTrigger className="h-7 w-full  p-4">
+                                <SelectTrigger className="h-7 w-full p-4">
                                     <SelectValue placeholder="Pilih Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -178,16 +188,14 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </div>
+                        
                         <div>
                             <Label>Periode Terbayar</Label>
 
                             <div className="flex items-center gap-2">
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="h-7 flex-1 justify-start  p-4 font-normal"
-                                        >
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
                                             <CalendarIcon className="mr-2 h-3 w-3" />
                                             {localFilters.start_date
                                                 ? format(new Date(localFilters.start_date), 'dd/MM/yyyy')
@@ -220,10 +228,7 @@ export default function Index({
 
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="h-7 flex-1 justify-start  p-4 font-normal"
-                                        >
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
                                             <CalendarIcon className="mr-2 h-3 w-3" />
                                             {localFilters.end_date
                                                 ? format(new Date(localFilters.end_date), 'dd/MM/yyyy')

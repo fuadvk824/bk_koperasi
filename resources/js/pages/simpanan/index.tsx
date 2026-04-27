@@ -39,6 +39,7 @@ interface Props {
         end_date?: string;
         office_id?: number;
         jenis: string;
+        statusUser: string;
         perPage?: number;
     };
     users: Option[];
@@ -72,6 +73,7 @@ export default function Index({
         end_date: filters.end_date ?? '',
         office_id: filters.office_id ?? '',
         jenis: filters.jenis ?? '',
+        statusUser: filters.statusUser ?? '',
         perPage: filters.perPage ?? 10,
     });
 
@@ -84,7 +86,7 @@ export default function Index({
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, start_date: '', end_date: '', office_id: '', jenis: '' });
+        setLocalFilters({ search: '', perPage: 10, start_date: '', end_date: '', office_id: '', jenis: '', statusUser: '' });
         router.get(
             route('simpanan.index'),
             {},
@@ -136,7 +138,7 @@ export default function Index({
                             <Input
                                 value={formatRupiah(totalSimpanan)}
                                 disabled
-                                className="border-bk-dev font-bold text-bk-dev "
+                                className="border-bk-dev font-bold text-bk-dev"
                             />
                         </div>
                         <div>
@@ -196,13 +198,13 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </div>
-                         <div>
+                        <div>
                             <Label>Jenis</Label>
                             <Select
                                 value={localFilters.jenis ?? 'all'}
                                 onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'jenis', value)}
                             >
-                                <SelectTrigger className="h-7 w-full bg-white p-4">
+                                <SelectTrigger className="h-7 w-full p-4">
                                     <SelectValue placeholder="Pilih Status" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -214,15 +216,28 @@ export default function Index({
                             </Select>
                         </div>
                         <div>
+                            <Label>Status Anggota</Label>
+                            <Select
+                                value={localFilters.statusUser ?? 'all'}
+                                onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)}
+                            >
+                                <SelectTrigger className="h-7 w-full p-4">
+                                    <SelectValue placeholder="Pilih Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Status</SelectItem>
+                                    <SelectItem value="active">Active</SelectItem>
+                                    <SelectItem value="inactive">Inactive</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
                             <Label>Periode</Label>
 
                             <div className="flex items-center gap-2">
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="h-7 flex-1 justify-start p-4 font-normal"
-                                        >
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
                                             <CalendarIcon className="mr-2 h-3 w-3" />
                                             {localFilters.start_date
                                                 ? format(new Date(localFilters.start_date), 'dd/MM/yyyy')
@@ -255,10 +270,7 @@ export default function Index({
 
                                 <Popover>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            className="h-7 flex-1 justify-start  p-4 font-normal"
-                                        >
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
                                             <CalendarIcon className="mr-2 h-3 w-3" />
                                             {localFilters.end_date
                                                 ? format(new Date(localFilters.end_date), 'dd/MM/yyyy')
