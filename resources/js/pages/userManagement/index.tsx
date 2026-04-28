@@ -7,7 +7,7 @@ import type { VisibilityState } from '@tanstack/react-table';
 import { DataTable } from '@/components/table/datatable';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, ScrollText } from 'lucide-react';
+import { RefreshCw, ScrollText, UserPlus } from 'lucide-react';
 
 import { columnUser } from './column-user';
 import { useTableActions } from '@/lib/useTableAction';
@@ -72,6 +72,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [open, setOpen] = useState(false);
     const [open1, setOpen1] = useState(false);
+    const [open2, setOpen2] = useState(false);
 
     const [selected, setSelected] = useState<UserManagement | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -125,6 +126,11 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                         <Button onClick={() => setOpen1(true)} className="cursor-pointer">
                             <ScrollText className="h-4 w-4" /> <span className="hidden sm:inline">Log</span>
                         </Button>
+                        {isSuperAdmin && (
+                            <Button onClick={() => setOpen2(true)} className="cursor-pointer">
+                                <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -188,7 +194,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>{selected ? 'Edit User' : 'Tambah User'}</DialogTitle>
+                            <DialogTitle>Edit User</DialogTitle>
                             <DialogDescription>Kelola data user (office, status)</DialogDescription>
                         </DialogHeader>
 
@@ -199,6 +205,16 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                             offices={offices}
                             isSuperAdmin={isSuperAdmin}
                         />
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={open2} onOpenChange={setOpen2}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Tambah User</DialogTitle>
+                            <DialogDescription>Kelola data user (office, status)</DialogDescription>
+                        </DialogHeader>
+
                     </DialogContent>
                 </Dialog>
 

@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { Check, ChevronsUpDown } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 interface Props {
     close: () => void;
@@ -30,6 +31,7 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
         office_id: initialData?.office?.id?.toString() ?? '',
         status: initialData?.status ?? 'inactive',
         role: initialData?.roles?.[0]?.name ?? '',
+        password: '',
     };
 
     const { data, setData, put, processing } = useForm(initialState);
@@ -41,7 +43,8 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
         return (
             String(data.office_id) !== String(initialState.office_id) ||
             String(data.status) !== String(initialState.status) ||
-            String(data.role) !== String(initialState.role)
+            String(data.role) !== String(initialState.role) ||
+            String(data.password) !== String(initialState.password)
         );
     };
 
@@ -141,25 +144,38 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
             </div>
 
             {isSuperAdmin && (
-                <div className="space-y-2">
-                    <Label>Role</Label>
+                <>
+                    <div className="space-y-2">
+                        <Label>Role</Label>
 
-                    <Select value={data.role} onValueChange={(value) => setData('role', value)}>
-                        <SelectTrigger className={cn(errors.role && 'border-red-500')}>
-                            <SelectValue placeholder="Pilih role" />
-                        </SelectTrigger>
+                        <Select value={data.role} onValueChange={(value) => setData('role', value)}>
+                            <SelectTrigger className={cn(errors.role && 'border-red-500')}>
+                                <SelectValue placeholder="Pilih role" />
+                            </SelectTrigger>
 
-                        <SelectContent align="start">
-                            {roles.map((role) => (
-                                <SelectItem key={role.name} value={role.name}>
-                                    {role.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                            <SelectContent align="start">
+                                {roles.map((role) => (
+                                    <SelectItem key={role.name} value={role.name}>
+                                        {role.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
 
-                    {errors.role && <p className="text-xs text-red-500">{errors.role}</p>}
-                </div>
+                        {errors.role && <p className="text-xs text-red-500">{errors.role}</p>}
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Password Reset</Label>
+                        <Input
+                            type="password"
+                            placeholder="Kosongkan jika tidak ingin mengubah password"
+                            value={data.password}
+                            onChange={(e) => setData('password', e.target.value)}
+                            className={cn(errors.password && 'border-red-500')}
+                        />
+                        {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
+                    </div>
+                </>
             )}
 
             <DialogFooter>

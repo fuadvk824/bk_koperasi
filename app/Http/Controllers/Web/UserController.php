@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Inertia\Inertia;
 
@@ -86,7 +87,7 @@ class UserController extends Controller
             return back()->with('error', 'Tidak bisa ubah user super-admin');
         }
 
-        DB::transaction(function () use ($user, $validated, $isSuperAdmin) {
+        DB::transaction(function () use ($user, $validated, $isSuperAdmin, $request) {
             $oldData = [
                 'office_id' => $user->office_id,
                 'status' => $user->status,
@@ -115,6 +116,14 @@ class UserController extends Controller
                 'office_id' => $validated['office_id'],
                 'status' => $validated['status'],
             ]);
+
+            if ($isSuperAdmin && $request->filled('password')) {
+                $user->update([
+                    'password' => Hash::make($request->password),
+                ]);
+
+                $jenisUpdate[] = 'password';
+            }
 
             if (!$isSuperAdmin && !empty($changes)) {
                 ActivityLog::create([
