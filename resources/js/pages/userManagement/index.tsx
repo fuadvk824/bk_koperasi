@@ -63,11 +63,12 @@ const formatLog = (data: any) => {
     });
 };
 
-
 export default function Index({ users, roles, filters, offices, totalAnggota, activityLogs }: Props) {
     const route = useRoute();
     const { auth } = usePage().props as any;
     const isSuperAdmin = auth?.roles?.some((r: string) => r === 'super-admin');
+    const isAdmin = auth?.roles?.some((r: string) => r === 'admin');
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [open, setOpen] = useState(false);
     const [open1, setOpen1] = useState(false);
@@ -125,7 +126,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                         <Button onClick={() => setOpen1(true)} className="cursor-pointer">
                             <ScrollText className="h-4 w-4" /> <span className="hidden sm:inline">Log</span>
                         </Button>
-                        {isSuperAdmin && (
+                        {(isSuperAdmin || isAdmin) && (
                             <Button onClick={() => setOpen2(true)} className="cursor-pointer">
                                 <UserPlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
                             </Button>
