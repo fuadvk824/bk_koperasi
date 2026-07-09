@@ -22,8 +22,8 @@ class AngsuranController extends Controller
         $perPage = $request->input('perPage', 10);
 
         $query = Angsuran::with('user:id,name,office_id')
-           
-           
+
+
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->whereHas('user', function ($u) use ($request) {
@@ -77,6 +77,12 @@ class AngsuranController extends Controller
     }
     public function updateStatus(Request $request, Angsuran $angsuran)
     {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+            return;
+        }
         $validated = $request->validate([
             'status' => 'required|in:pending,sudah_bayar',
             'nominal_bayar' => 'nullable|numeric|min:0',

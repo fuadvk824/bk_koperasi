@@ -1,5 +1,5 @@
 import { ColumnDef } from '@tanstack/react-table';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 
 import {
@@ -24,6 +24,8 @@ import { BookmarkCheck } from 'lucide-react';
 
 const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
     const route = useRoute();
+    const { auth } = usePage().props as any;
+    const trial = auth?.roles?.some((r: string) => r === 'trial-user');
 
     const [isCustom, setIsCustom] = useState(false);
     const [nominal, setNominal] = useState<number>(Math.floor(Number(angsuran.jumlah_bayar)));
@@ -72,8 +74,9 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
     return (
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button className="cursor-pointer hover:scale-105" disabled={angsuran.status === 'sudah_bayar'}>
-                    <BookmarkCheck />Approve
+                <Button className="cursor-pointer hover:scale-105" disabled={angsuran.status === 'sudah_bayar' || trial}>
+                    <BookmarkCheck />
+                    Approve
                 </Button>
             </AlertDialogTrigger>
 
@@ -121,11 +124,10 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
 
                             {!error && nominal > angsuran.jumlah_bayar && (
                                 <p className="mt-1 text-xs text-green-600">
-                                    Terbayar {kelipatan}x angsuran.
-                                    Kelebihan {formatRupiah(sisa)} akan masuk ke simpanan sukarela
+                                    Terbayar {kelipatan}x angsuran. Kelebihan {formatRupiah(sisa)} akan masuk ke simpanan
+                                    sukarela
                                 </p>
                             )}
-
                         </div>
                     )}
                 </div>
@@ -134,7 +136,8 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
 
                     <AlertDialogAction className="bg-green-600" onClick={handleUpdate} disabled={!!error}>
-                        <BookmarkCheck />Approve
+                        <BookmarkCheck />
+                        Approve
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

@@ -20,9 +20,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import Form from './form';
 import { ActivityLog } from '@/types/custom/activityLog';
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import FormCreate from './form-create';
 
 interface Option {
     id: number;
@@ -63,12 +63,11 @@ const formatLog = (data: any) => {
     });
 };
 
+
 export default function Index({ users, roles, filters, offices, totalAnggota, activityLogs }: Props) {
     const route = useRoute();
     const { auth } = usePage().props as any;
-
     const isSuperAdmin = auth?.roles?.some((r: string) => r === 'super-admin');
-
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [open, setOpen] = useState(false);
     const [open1, setOpen1] = useState(false);
@@ -212,9 +211,10 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Tambah User</DialogTitle>
-                            <DialogDescription>Kelola data user (office, status)</DialogDescription>
+                            <DialogDescription>Tambahkan user baru</DialogDescription>
                         </DialogHeader>
 
+                        <FormCreate close={() => setOpen2(false)} offices={offices} roles={roles} />
                     </DialogContent>
                 </Dialog>
 
@@ -246,7 +246,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
 
                                         <div className="grid grid-cols-2 gap-4 text-xs">
                                             <div>
-                                                <div className="mb-1 font-medium text-yellow-300">Sebelum</div>
+                                                <div className="mb-1 font-medium text-orange-300">Sebelum</div>
                                                 <div className="space-y-1">
                                                     {formatLog(log.old).map((item, i) => (
                                                         <div key={i}>

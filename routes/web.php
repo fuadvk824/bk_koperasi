@@ -17,7 +17,7 @@ Route::inertia('/', 'welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [BerandaController::class, 'index'])->name('dashboard');
+   
     Route::get('/user/bg', [UserPreferenceController::class, 'show']);
     Route::post('/user/bg', [UserPreferenceController::class, 'update']);
 
@@ -37,9 +37,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::get('/', [UserController::class, 'index'])->name('index');
 
                 Route::put('/{user}/update', [UserController::class, 'update'])->name('update');
+                Route::post('/user-management', [UserController::class, 'store'])
+                    ->name('store');
             });
     });
-    Route::middleware(['role:super-admin|admin'])->group(function () {
+    Route::middleware(['role:super-admin|admin|trial-user'])->group(function () {
+         Route::get('/dashboard', [BerandaController::class, 'index'])->name('dashboard');
         Route::prefix('simpanan')
             ->name('simpanan.')
             ->group(function () {
@@ -80,9 +83,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::post('/', [TransaksiKasController::class, 'store'])->name('store');
             });
     });
-
-  
 });
 
 require __DIR__ . '/settings.php';
-

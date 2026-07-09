@@ -82,6 +82,12 @@ class PinjamanController extends Controller
 
     public function store(Request $request)
     {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+            return;
+        }
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'jumlah_pinjaman' => 'required|numeric|min:1',
@@ -172,6 +178,12 @@ class PinjamanController extends Controller
 
     public function update(Request $request, Pinjaman $pinjaman)
     {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+            return;
+        }
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'jumlah_pinjaman' => 'required|numeric|min:1',

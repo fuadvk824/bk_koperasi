@@ -68,6 +68,65 @@ class UserController extends Controller
         ]);
     }
 
+    private function transformLog($data)
+    {
+        if (!$data) {
+            return null;
+        }
+
+        $data = is_array($data) ? $data : json_decode($data, true);
+
+        if (isset($data['office_id'])) {
+            $office = Office::find($data['office_id']);
+            $data['office'] = $office->name ?? '-';
+            unset($data['office_id']);
+        }
+
+        // Jangan tampilkan role
+        unset($data['role_id']);
+        unset($data['role']);
+
+        return $data;
+    }
+
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'office_id' => 'required|exists:offices,id',
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'office_id' => $validated['office_id'],
+                'status' => 'active',
+                'password' => Hash::make('ffuiadda'),
+                'active_at' => now(),
+            ]);
+
+            $user->assignRole('user');
+            ActivityLog::create([
+                'by_admin' => Auth::id(),
+                'user_id' => $user->id,
+                'jenis_update' => 'Add User',
+                'old' => null,
+                'new' => json_encode([
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'office_id' => $user->office_id,
+                    'status' => $user->status,
+                    'role' => 'user',
+                ]),
+            ]);
+        });
+
+        return back()->with('success', 'User berhasil ditambahkan');
+    }
+
     public function update(Request $request, User $user)
     {
         $isSuperAdmin = Auth::user()->roles->contains('name', 'super-admin');
@@ -141,28 +200,5 @@ class UserController extends Controller
         });
 
         return back()->with('success', 'User berhasil diupdate');
-    }
-
-    private function transformLog($data)
-    {
-        if (!$data) {
-            return null;
-        }
-
-        $data = is_array($data) ? $data : json_decode($data, true);
-
-        if (isset($data['office_id'])) {
-            $office = Office::find($data['office_id']);
-            $data['office'] = $office->name ?? '-';
-            unset($data['office_id']);
-        }
-
-        if (isset($data['role_id'])) {
-            $role = Role::find($data['role_id']);
-            $data['role'] = $role->name ?? '-';
-            unset($data['role_id']);
-        }
-
-        return $data;
     }
 }

@@ -53,37 +53,37 @@ export function AppSidebar() {
             title: 'Beranda',
             href: '/dashboard',
             icon: LayoutGrid,
-            roles: ['super-admin', 'admin'],
+            roles: ['super-admin', 'admin', 'trial-user'],
         },
         {
             title: 'Data Anggota',
             href: '/anggota',
             icon: Contact,
-            roles: ['super-admin', 'admin'],
+            roles: ['super-admin', 'admin', 'trial-user'],
         },
         {
             title: 'Data Simpanan',
             href: '/simpanan',
             icon: PiggyBank,
-            roles: ['super-admin', 'admin'],
+            roles: ['super-admin', 'admin', 'trial-user'],
         },
         {
             title: 'Data Pinjaman',
             href: '/pinjaman',
             icon: HandCoins,
-            roles: ['super-admin', 'admin'],
+            roles: ['super-admin', 'admin', 'trial-user'],
         },
         {
             title: 'Data Angsuran',
             href: '/angsuran',
             icon: CircleDollarSign,
-            roles: ['super-admin', 'admin'],
+            roles: ['super-admin', 'admin', 'trial-user'],
         },
         {
             title: 'Transaksi Kas',
             href: '/transaksikas',
             icon: Landmark,
-            roles: ['super-admin', 'admin'],
+            roles: ['super-admin', 'admin', 'trial-user'],
         },
 
         {

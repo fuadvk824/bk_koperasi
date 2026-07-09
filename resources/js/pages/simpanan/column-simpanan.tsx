@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Simpanan } from '@/types/custom/simpanan';
 import { formatRupiah } from '@/lib/formatRupiah';
 
-export const columnSimpanan = (onEdit: any): ColumnDef<Simpanan>[] => [
+export const columnSimpanan = (openEdit: any, trial: boolean): ColumnDef<Simpanan>[] => [
     {
         accessorKey: 'tanggal',
         header: 'Tanggal',
@@ -33,9 +33,10 @@ export const columnSimpanan = (onEdit: any): ColumnDef<Simpanan>[] => [
             const data = row.original;
 
             return (
-                <Button onClick={() => onEdit(data)} className="cursor-pointer hover:scale-105">
+                <Button onClick={() => openEdit(data)} disabled={trial} className="cursor-pointer hover:scale-105">
                     <SquarePen size={16} /> Edit
                 </Button>
+                
             );
         },
     },

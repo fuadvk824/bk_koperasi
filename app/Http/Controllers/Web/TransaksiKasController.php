@@ -76,6 +76,12 @@ class TransaksiKasController extends Controller
 
     public function store(Request $request)
     {
+        /** @var \App\Models\User|null $user */
+$user = Auth::user();
+
+if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+    return;
+}
         $request->validate([
             'jenis' => 'required|in:masuk,keluar',
             'jumlah' => 'required|numeric|min:0',

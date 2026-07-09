@@ -4,7 +4,7 @@ import { SquarePen } from 'lucide-react';
 import { Pinjaman } from '@/types/custom/pinjaman';
 import { formatRupiah } from '@/lib/formatRupiah';
 
-export const columnPinjaman = (onEdit: any): ColumnDef<Pinjaman>[] => [
+export const columnPinjaman = (openEdit: any, trial: boolean): ColumnDef<Pinjaman>[] => [
     {
         accessorKey: 'user.name',
         header: 'Nama',
@@ -78,7 +78,7 @@ export const columnPinjaman = (onEdit: any): ColumnDef<Pinjaman>[] => [
             const data = row.original;
 
             return (
-                <Button onClick={() => onEdit(data)} className="cursor-pointer hover:scale-105">
+                <Button onClick={() => openEdit(data)} disabled={trial} className="cursor-pointer hover:scale-105">
                     <SquarePen size={16} /> Edit
                 </Button>
             );

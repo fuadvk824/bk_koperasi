@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -16,6 +16,9 @@ interface Props {
 export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    const { auth } = usePage().props as any;
+    const trial = auth?.roles?.some((r: string) => r === 'trial-user');
 
     const handleSubmit = () => {
         setLoading(true);
@@ -51,7 +54,7 @@ export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
 
     return (
         <>
-            <Button variant="destructive" size="sm" onClick={() => setOpen(true)} className="cursor-pointer">
+            <Button disabled={trial} variant="destructive" size="sm" onClick={() => setOpen(true)} className="cursor-pointer">
                 Keluar
             </Button>
 
@@ -66,7 +69,6 @@ export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
                                 <p>
                                     Apakah kamu yakin ingin mengeluarkan <strong>{nama}</strong>?
                                 </p>{' '}
-
                                 {sisaSimpanan > 0 ? (
                                     <p className="text-bk-dev">
                                         {' '}

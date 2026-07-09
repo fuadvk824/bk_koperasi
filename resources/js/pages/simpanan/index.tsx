@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useRoute } from '@/lib/route';
 import type { VisibilityState } from '@tanstack/react-table';
 import { useState } from 'react';
@@ -61,6 +61,9 @@ export default function Index({
     simpananModal,
 }: Props) {
     const route = useRoute();
+    const { auth } = usePage().props as any;
+    const trial = auth?.roles?.some((r: string) => r === 'trial-user');
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<Simpanan | null>(null);
@@ -125,7 +128,7 @@ export default function Index({
                             <FileSpreadsheet className="h-4 w-4" /> <span className="hidden sm:inline">Export</span>
                         </Button>
 
-                        <Button onClick={openCreate} className="cursor-pointer">
+                        <Button onClick={openCreate} disabled={trial} className="cursor-pointer">
                             <FilePlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
                         </Button>
                     </div>
@@ -219,7 +222,9 @@ export default function Index({
                             <Label>Status Anggota</Label>
                             <Select
                                 value={localFilters.statusUser ?? 'all'}
-                                onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)}
+                                onValueChange={(value) =>
+                                    handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)
+                                }
                             >
                                 <SelectTrigger className="h-7 w-full p-4">
                                     <SelectValue placeholder="Pilih Status" />
@@ -313,7 +318,7 @@ export default function Index({
                 </Dialog>
 
                 <DataTable
-                    columns={columnSimpanan(openEdit)}
+                    columns={columnSimpanan(openEdit, trial)}
                     data={simpanan.data}
                     meta={simpanan.meta}
                     columnVisibility={columnVisibility}

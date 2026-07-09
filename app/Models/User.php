@@ -33,7 +33,6 @@ class User extends Authenticatable
         ];
     }
 
-
     public function simpanan()
     {
         return $this->hasMany(Simpanan::class);

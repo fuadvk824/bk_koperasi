@@ -54,6 +54,7 @@ export default function Index({
     keuntunganBunga,
 }: Props) {
     const route = useRoute();
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -188,7 +189,7 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </div>
-                        
+
                         <div>
                             <Label>Periode Terbayar</Label>
 

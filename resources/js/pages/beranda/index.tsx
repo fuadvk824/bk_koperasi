@@ -61,7 +61,7 @@ export default function Dashboard() {
     const roles = props.auth.user?.roles ?? [];
 
     const isUser = roles.some((r) => r.name === 'user');
-    const isAdmin = roles.some((r) => ['super-admin', 'admin'].includes(r.name));
+    const isAdmin = roles.some((r) => ['super-admin', 'admin', 'trial-user'].includes(r.name));
 
     if (isUser) {
         return (

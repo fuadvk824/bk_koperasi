@@ -87,6 +87,12 @@ class SimpananController extends Controller
             'jumlah' => 'required|numeric|min:0',
             'tanggal' => 'required|date',
         ]);
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+            return;
+        }
 
         DB::transaction(function () use ($validated) {
             $simpanan = Simpanan::create($validated);
@@ -115,6 +121,13 @@ class SimpananController extends Controller
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'simpanan' => 'Simpanan sukarela tidak bisa diubah',
             ]);
+        }
+
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+            return;
         }
 
         $validated = $request->validate([

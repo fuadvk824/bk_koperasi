@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { VisibilityState } from '@tanstack/react-table';
 
@@ -35,7 +35,7 @@ interface Props {
         status?: string;
         office_id?: number;
         statusUser?: string;
-        statusPinjaman: string
+        statusPinjaman: string;
         perPage?: number;
     };
     users: Option[];
@@ -47,6 +47,9 @@ interface Props {
 
 export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total_pinjaman, sisa_pinjaman, offices }: Props) {
     const route = useRoute();
+    const { auth } = usePage().props as any;
+    const trial = auth?.roles?.some((r: string) => r === 'trial-user');
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<any>(null);
@@ -72,7 +75,15 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, start_date: '', end_date: '', status: '', office_id: '', statusUser: '' });
+        setLocalFilters({
+            search: '',
+            perPage: 10,
+            start_date: '',
+            end_date: '',
+            status: '',
+            office_id: '',
+            statusUser: '',
+        });
         router.get(
             route('pinjaman.index'),
             {},
@@ -110,10 +121,11 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                         <Button disabled variant="outline" onClick={() => handleExport(columnVisibility)}>
                             <FileSpreadsheet className="h-4 w-4" /> <span className="hidden sm:inline">Export</span>
                         </Button>
-
-                        <Button onClick={openCreate} className="cursor-pointer">
-                            <FilePlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
-                        </Button>
+                        
+                            <Button onClick={openCreate} disabled={trial} className="cursor-pointer">
+                                <FilePlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
+                            </Button>
+                     
                     </div>
                 </div>
 
@@ -291,7 +303,7 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                 </Dialog>
 
                 <DataTable
-                    columns={columnPinjaman(openEdit)}
+                    columns={columnPinjaman(openEdit, trial)}
                     data={pinjaman.data}
                     meta={pinjaman.meta}
                     columnVisibility={columnVisibility}

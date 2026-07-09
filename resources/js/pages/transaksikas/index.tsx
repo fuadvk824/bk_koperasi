@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { VisibilityState } from '@tanstack/react-table';
 
@@ -50,6 +50,9 @@ interface Props {
 
 export default function Index({ transaksiKas, filters, offices, saldoKas, kasMasuk, kasKeluar }: Props) {
     const route = useRoute();
+    const { auth } = usePage().props as any;
+    const trial = auth?.roles?.some((r: string) => r === 'trial-user');
+
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [open, setOpen] = useState(false);
     const [selected, setSelected] = useState<TransaksiKas | null>(null);
@@ -107,7 +110,7 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
                             <FileSpreadsheet className="h-4 w-4" /> <span className="hidden sm:inline">Export</span>
                         </Button>
 
-                        <Button onClick={openCreate} className="cursor-pointer">
+                        <Button onClick={openCreate} disabled={trial} className="cursor-pointer">
                             <Tickets className="h-4 w-4" /> <span className="hidden sm:inline">Mutasi</span>
                         </Button>
                     </div>
@@ -203,7 +206,9 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
                             <Label>Status Anggota</Label>
                             <Select
                                 value={localFilters.statusUser ?? 'all'}
-                                onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)}
+                                onValueChange={(value) =>
+                                    handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)
+                                }
                             >
                                 <SelectTrigger className="h-7 w-full p-4">
                                     <SelectValue placeholder="Pilih Status" />

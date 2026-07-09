@@ -83,6 +83,12 @@ class AnggotaController extends Controller
 
     public function keluar(User $user)
     {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+            return;
+        }
         return DB::transaction(function () use ($user) {
 
             if ($user->status === 'inactive') {
@@ -104,7 +110,7 @@ class AnggotaController extends Controller
                 return back()->with('error', 'Simpanan tidak mencukupi untuk menutup pinjaman');
             }
 
-          
+
             if ($totalSisaPinjaman > 0) {
 
                 $simpananAngsuran = Simpanan::create([
@@ -129,7 +135,7 @@ class AnggotaController extends Controller
                 ]);
             }
 
-          
+
             foreach ($pinjamanList as $pinjaman) {
 
                 $angsuranList = Angsuran::where('pinjaman_id', $pinjaman->id)
