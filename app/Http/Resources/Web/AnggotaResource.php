@@ -30,7 +30,7 @@ class AnggotaResource extends JsonResource
             'total_pinjaman' => $totalPinjaman,
             'total_angsuran' => $this->angsuran_sum_jumlah_bayar ?? 0,
 
-            // 🔥 TAMBAHAN PENTING
+             
             'sisa_simpanan' => $totalSimpanan - $totalPinjaman,
         ];
     }

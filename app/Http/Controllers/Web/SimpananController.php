@@ -87,10 +87,10 @@ class SimpananController extends Controller
             'jumlah' => 'required|numeric|min:0',
             'tanggal' => 'required|date',
         ]);
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        /** @var \App\Models\User|null $admin */
+        $admin = Auth::user();
 
-        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+        if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
 
@@ -123,10 +123,10 @@ class SimpananController extends Controller
             ]);
         }
 
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        /** @var \App\Models\User|null $admin */
+        $admin = Auth::user();
 
-        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+        if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
 

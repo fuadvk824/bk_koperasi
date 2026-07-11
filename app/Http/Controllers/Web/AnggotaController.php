@@ -83,12 +83,13 @@ class AnggotaController extends Controller
 
     public function keluar(User $user)
     {
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
+        /** @var \App\Models\User|null $admin */
+        $admin = Auth::user();
 
-        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+        if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
+        
         return DB::transaction(function () use ($user) {
 
             if ($user->status === 'inactive') {

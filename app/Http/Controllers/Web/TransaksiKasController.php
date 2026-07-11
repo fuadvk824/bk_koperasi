@@ -26,7 +26,7 @@ class TransaksiKasController extends Controller
                     })->orWhere('ref_id', $request->search);
                 });
             })
-             ->when($request->statusUser, function ($q) use ($request) {
+            ->when($request->statusUser, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->whereHas('user', function ($u) use ($request) {
                         $u->where('status', $request->statusUser);
@@ -76,12 +76,12 @@ class TransaksiKasController extends Controller
 
     public function store(Request $request)
     {
-        /** @var \App\Models\User|null $user */
-$user = Auth::user();
+        /** @var \App\Models\User|null $admin */
+        $admin = Auth::user();
 
-if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
-    return;
-}
+        if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
+            return;
+        }
         $request->validate([
             'jenis' => 'required|in:masuk,keluar',
             'jumlah' => 'required|numeric|min:0',

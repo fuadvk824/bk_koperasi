@@ -77,12 +77,12 @@ class AngsuranController extends Controller
     }
     public function updateStatus(Request $request, Angsuran $angsuran)
     {
-        /** @var \App\Models\User|null $user */
-        $user = Auth::user();
-
-        if (!$user || !$user->hasAnyRole(['super-admin', 'admin'])) {
+        /** @var \App\Models\User|null $admin */
+        $admin = Auth::user();
+        if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
+
         $validated = $request->validate([
             'status' => 'required|in:pending,sudah_bayar',
             'nominal_bayar' => 'nullable|numeric|min:0',
