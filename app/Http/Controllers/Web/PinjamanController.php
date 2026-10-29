@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use App\Models\Angsuran;
 use App\Models\Office;
+use App\Models\PengaturanKoperasi;
 use App\Models\User;
 use App\Models\TransaksiKas;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +20,8 @@ class PinjamanController extends Controller
 {
     public function index(Request $request)
     {
+        $statusUser = $request->input('statusUser', 'active');
+
         $perPage = $request->input('perPage', 10);
 
         $query = Pinjaman::with('user:id,name,office_id')
@@ -29,11 +32,9 @@ class PinjamanController extends Controller
                     })->orWhere('id', $request->search);
                 });
             })
-            ->when($request->statusUser, function ($q) use ($request) {
-                $q->where(function ($sub) use ($request) {
-                    $sub->whereHas('user', function ($u) use ($request) {
-                        $u->where('status', $request->statusUser);
-                    });
+            ->when($statusUser !== 'all', function ($q) use ($statusUser) {
+                $q->whereHas('user', function ($u) use ($statusUser) {
+                    $u->where('status', $statusUser);
                 });
             })
             ->when($request->status, function ($q) use ($request) {
@@ -50,16 +51,30 @@ class PinjamanController extends Controller
 
         $data = (clone $query)->orderBy('tanggal_pinjaman', 'desc')->paginate($perPage)->withQueryString();
 
-        // $activeQuery = (clone $query)->whereHas('user', function ($q) {
-        //     $q->where('status', 'active');
-        // });
-
-        // $jumlah_pinjaman = $activeQuery->sum('jumlah_pinjaman');
-        // $total_pinjaman = $activeQuery->sum('total_pinjaman');
-        // $sisa_pinjaman = $activeQuery->sum('sisa_pinjaman');
         $jumlah_pinjaman = (clone $query)->sum('jumlah_pinjaman');
         $total_pinjaman = (clone $query)->sum('total_pinjaman');
         $sisa_pinjaman = (clone $query)->sum('sisa_pinjaman');
+
+
+        $tanggalHariIni = Carbon::today()->toDateString();
+
+        $pengaturan = PengaturanKoperasi::query()
+            ->where(function ($query) use ($tanggalHariIni) {
+                $query->whereNull('berlaku_mulai')
+                    ->orWhereDate('berlaku_mulai', '<=', $tanggalHariIni);
+            })
+            ->where(function ($query) use ($tanggalHariIni) {
+                $query->whereNull('berlaku_sampai')
+                    ->orWhereDate('berlaku_sampai', '>=', $tanggalHariIni);
+            })
+            ->orderByRaw('berlaku_mulai IS NULL ASC')
+            ->orderByDesc('berlaku_mulai')
+            ->orderByDesc('id')
+            ->first();
+
+        $bungaPinjamanSetting = (float) (
+            $pengaturan?->bunga_pinjaman ?? 0
+        );
 
         return Inertia::render('pinjaman/index', [
             'pinjaman' => PinjamanResource::collection($data)->response()->getData(true),
@@ -77,6 +92,8 @@ class PinjamanController extends Controller
             'jumlah_pinjaman' => (float) $jumlah_pinjaman,
             'total_pinjaman' => (float) $total_pinjaman,
             'sisa_pinjaman' => (float) $sisa_pinjaman,
+
+            'bungaPinjamanSetting' => $bungaPinjamanSetting,
         ]);
     }
 
@@ -88,16 +105,37 @@ class PinjamanController extends Controller
         if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'jumlah_pinjaman' => 'required|numeric|min:1',
-            'bunga_persen' => 'required|numeric|min:0',
+            // 'bunga_persen' => 'required|numeric|min:0',
             'lama_angsuran' => 'required|integer|min:1',
             'tanggal_pinjaman' => 'required|date',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $bunga = ($validated['jumlah_pinjaman'] * $validated['bunga_persen']) / 100;
+        $tanggalHariIni = Carbon::today()->toDateString();
+
+        $pengaturan = PengaturanKoperasi::query()
+            ->where(function ($query) use ($tanggalHariIni) {
+                $query->whereNull('berlaku_mulai')
+                    ->orWhereDate('berlaku_mulai', '<=', $tanggalHariIni);
+            })
+            ->where(function ($query) use ($tanggalHariIni) {
+                $query->whereNull('berlaku_sampai')
+                    ->orWhereDate('berlaku_sampai', '>=', $tanggalHariIni);
+            })
+            ->orderByRaw('berlaku_mulai IS NULL ASC')
+            ->orderByDesc('berlaku_mulai')
+            ->orderByDesc('id')
+            ->first();
+
+        $bungaPersen = (float) (
+            $pengaturan?->bunga_pinjaman ?? 0
+        );
+
+        DB::transaction(function () use ($validated, $bungaPersen) {
+            $bunga = ($validated['jumlah_pinjaman'] * $bungaPersen) / 100;
             $total = $validated['jumlah_pinjaman'] + $bunga;
             $lama = $validated['lama_angsuran'];
 
@@ -115,6 +153,7 @@ class PinjamanController extends Controller
 
             $pinjaman = Pinjaman::create([
                 ...$validated,
+                'bunga_persen' => $bungaPersen,
                 'total_pinjaman' => $total,
                 'sisa_pinjaman' => $total,
                 'angsuran_per_bulan' => $angsuranBulat,
@@ -184,7 +223,7 @@ class PinjamanController extends Controller
         if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
-        
+
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'jumlah_pinjaman' => 'required|numeric|min:1',

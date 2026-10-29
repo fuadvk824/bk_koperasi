@@ -53,7 +53,6 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
         </BackgroundContext.Provider>
     );
 }
-
 export function useBackground() {
     const ctx = useContext(BackgroundContext);
 

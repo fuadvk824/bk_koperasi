@@ -44,6 +44,7 @@ class TransaksiKasResource extends JsonResource
             'ref_type' => $this->ref_type,
             'ref_id' => $this->ref_id,
             'status' => $this->status,
+            'created_at' => $this->created_at->format('Y-m-d'),
         ];
     }
 }

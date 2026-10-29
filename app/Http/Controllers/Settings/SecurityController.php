@@ -21,8 +21,8 @@ class SecurityController extends Controller implements HasMiddleware
     {
         return Features::canManageTwoFactorAuthentication()
             && Features::optionEnabled(Features::twoFactorAuthentication(), 'confirmPassword')
-                ? [new Middleware('password.confirm', only: ['edit'])]
-                : [];
+            ? [new Middleware('password.confirm', only: ['edit'])]
+            : [];
     }
 
     /**
@@ -47,12 +47,20 @@ class SecurityController extends Controller implements HasMiddleware
     /**
      * Update the user's password.
      */
+    // public function update(PasswordUpdateRequest $request): RedirectResponse
+    // {
+    //     $request->user()->update([
+    //         'password' => $request->password,
+    //     ]);
+
+    //    return redirect('/dashboard');
+    // }
     public function update(PasswordUpdateRequest $request): RedirectResponse
     {
         $request->user()->update([
             'password' => $request->password,
         ]);
 
-       return redirect('/dashboard');
+        return redirect()->route('security.edit');
     }
 }

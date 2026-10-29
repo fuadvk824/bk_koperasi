@@ -11,17 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
-import { RefreshCw, FileSpreadsheet, Tickets } from 'lucide-react';
+import { RefreshCw, FileSpreadsheet, Tickets, CalendarIcon } from 'lucide-react';
 import { columnTransaksiKas } from './column-transaksi-kas';
 
 import type { TransaksiKas } from '@/types/custom/transaksikas';
 import type { PaginationMeta } from '@/types/custom/pagination';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { formatRupiah } from '@/lib/formatRupiah';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Form from './form';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 
 interface Option {
     id: number;
@@ -35,6 +38,8 @@ interface Props {
     };
     filters: {
         search?: string;
+        start_date?: string;
+        end_date?: string;
         perPage?: number;
         jenis?: string;
         kategori?: string;
@@ -61,6 +66,8 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
 
     const [localFilters, setLocalFilters] = useState({
         search: filters.search ?? '',
+        start_date: filters.start_date ?? '',
+        end_date: filters.end_date ?? '',
         perPage: filters.perPage ?? 10,
         jenis: filters.jenis,
         kategori: filters.kategori,
@@ -77,7 +84,16 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, jenis: '', kategori: '', office_id: '', statusUser: '' });
+        setLocalFilters({
+            search: '',
+            start_date: '',
+            end_date: '',
+            perPage: 10,
+            jenis: '',
+            kategori: '',
+            office_id: '',
+            statusUser: '',
+        });
         router.get(
             route('transaksikas.index'),
             {},
@@ -98,7 +114,7 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
 
             <div className="space-y-4 p-5">
                 <div className="flex justify-between">
-                    <h1 className="text-xl font-semibold">Data Transaksi Kas</h1>
+                    <h1 className="text-xl font-semibold">Data Transaksi Kas - 13/09/26</h1>
 
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={handleResetFilters} className="cursor-pointer">
@@ -116,7 +132,7 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 rounded-xl border p-4">
+                <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
                             <Label className="font-bold text-bk-dev">Total Saldo Kas</Label>
@@ -219,6 +235,73 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
                                     <SelectItem value="inactive">Inactive</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div>
+                            <Label>Periode</Label>
+
+                            <div className="flex items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
+                                            <CalendarIcon className="mr-2 h-3 w-3" />
+                                            {localFilters.start_date
+                                                ? format(new Date(localFilters.start_date), 'dd/MM/yyyy')
+                                                : 'Pilih tanggal'}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={
+                                                localFilters.start_date ? new Date(localFilters.start_date) : undefined
+                                            }
+                                            onSelect={(date) =>
+                                                handleFilterChange(
+                                                    localFilters,
+                                                    setLocalFilters,
+                                                    'start_date',
+                                                    date ? format(date, 'yyyy-MM-dd') : '',
+                                                )
+                                            }
+                                            captionLayout="dropdown"
+                                            fromYear={2020}
+                                            toYear={2050}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+
+                                <span className="text-[10px] whitespace-nowrap text-muted-foreground">s/d</span>
+
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
+                                            <CalendarIcon className="mr-2 h-3 w-3" />
+                                            {localFilters.end_date
+                                                ? format(new Date(localFilters.end_date), 'dd/MM/yyyy')
+                                                : 'Pilih tanggal'}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={localFilters.end_date ? new Date(localFilters.end_date) : undefined}
+                                            onSelect={(date) =>
+                                                handleFilterChange(
+                                                    localFilters,
+                                                    setLocalFilters,
+                                                    'end_date',
+                                                    date ? format(date, 'yyyy-MM-dd') : '',
+                                                )
+                                            }
+                                            captionLayout="dropdown"
+                                            fromYear={2020}
+                                            toYear={2050}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
                         </div>
                     </div>
                 </div>

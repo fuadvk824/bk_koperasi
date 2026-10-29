@@ -1,16 +1,28 @@
+
 <?php
 
 use App\Models\User;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 test('guests are redirected to the login page', function () {
-    $response = $this->get(route('dashboard'));
-    $response->assertRedirect(route('login'));
+    $this->get(route('dashboard'))
+        ->assertRedirect(route('login'));
 });
 
-test('authenticated users can visit the dashboard', function () {
-    $user = User::factory()->create();
-    $this->actingAs($user);
+test('authenticated users with an allowed role can visit the dashboard', function () {
+    app(\Spatie\Permission\PermissionRegistrar::class)
+        ->forgetCachedPermissions();
 
-    $response = $this->get(route('dashboard'));
-    $response->assertOk();
+    $permission = Permission::findOrCreate('view dashboard', 'web');
+    $role = Role::findOrCreate('admin', 'web');
+
+    $role->givePermissionTo($permission);
+
+    $user = User::factory()->create();
+    $user->assignRole($role);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk();
 });

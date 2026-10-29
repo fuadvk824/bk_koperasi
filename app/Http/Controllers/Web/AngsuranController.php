@@ -9,6 +9,7 @@ use App\Models\Office;
 use App\Models\Pinjaman;
 use App\Models\Simpanan;
 use App\Models\TransaksiKas;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,6 @@ class AngsuranController extends Controller
         $perPage = $request->input('perPage', 10);
 
         $query = Angsuran::with('user:id,name,office_id')
-
 
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
@@ -40,8 +40,12 @@ class AngsuranController extends Controller
             ->when($request->status, function ($q) use ($request) {
                 $q->where('status', $request->status);
             })
-            ->when($request->start_date && $request->end_date, function ($q) use ($request) {
-                $q->whereBetween('tanggal_bayar', [$request->start_date, $request->end_date]);
+           
+            ->when($request->filled('bulan'), function ($q) use ($request) {
+                $q->where('bulan', $request->bulan);
+            })
+            ->when($request->filled('tahun'), function ($q) use ($request) {
+                $q->where('tahun', $request->tahun);
             });
 
         $data = (clone $query)
@@ -50,20 +54,18 @@ class AngsuranController extends Controller
             ->paginate($perPage)
             ->withQueryString();
 
-        // $activeQuery = (clone $query)->whereHas('user', function ($q) {
-        //     $q->where('status', 'active');
-        // });
+       
 
         $totAngsJlnNoBunga = (clone $query)->sum('dana_pinjaman');
         $totAngsJlnWithBunga = (clone $query)->sum('jumlah_bayar');
         $keuntunganBunga = (clone $query)->sum('bunga_bayar');
-
         return Inertia::render('angsuran/index', [
             'angsuran' => AngsuranResource::collection($data)->response()->getData(true),
             'filters' => [
                 'search' => $request->search,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
+                
+                'bulan' => $request->bulan,
+                'tahun' => $request->tahun,
                 'status' => $request->status,
                 'office_id' => $request->office_id,
                 'statusPinjaman' => $request->statusPinjaman,
@@ -75,36 +77,54 @@ class AngsuranController extends Controller
             'keuntunganBunga' => (float) $keuntunganBunga,
         ]);
     }
+
+
     public function updateStatus(Request $request, Angsuran $angsuran)
     {
         /** @var \App\Models\User|null $admin */
         $admin = Auth::user();
+
         if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
-            return;
+            abort(403, 'Anda tidak memiliki akses.');
         }
 
         $validated = $request->validate([
-            'status' => 'required|in:pending,sudah_bayar',
-            'nominal_bayar' => 'nullable|numeric|min:0',
+            'status' => 'required|in:sudah_bayar',
+            'nominal_bayar' => 'nullable|numeric|min:0.01',
+            'tanggal_bayar' => 'required|date|before_or_equal:today',
         ]);
 
+        // Tanggal pembayaran yang sebenarnya dipilih admin.
+        $tanggalBayar = Carbon::parse($validated['tanggal_bayar'])->startOfDay();
+
         try {
-            DB::transaction(function () use ($angsuran, $validated) {
+            DB::transaction(function () use ($angsuran, $validated, $tanggalBayar) {
+                // Kunci record untuk menghindari approve bersamaan.
+                $angsuran = Angsuran::whereKey($angsuran->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
                 if ($angsuran->status === 'sudah_bayar') {
-                    throw new \Exception('Angsuran sudah dibayar');
+                    throw new \Exception('Angsuran sudah dibayar.');
                 }
 
-                $pinjaman = Pinjaman::findOrFail($angsuran->pinjaman_id);
+                $pinjaman = Pinjaman::whereKey($angsuran->pinjaman_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-                $realBayar = $validated['nominal_bayar'] ?? $angsuran->jumlah_bayar;
+                $realBayar = (float) (
+                    $validated['nominal_bayar'] ?? $angsuran->jumlah_bayar
+                );
 
-                if ($realBayar < $angsuran->jumlah_bayar) {
-                    throw new \Exception('Nominal tidak boleh kurang dari angsuran');
+                if ($realBayar < (float) $angsuran->jumlah_bayar) {
+                    throw new \Exception(
+                        'Nominal pembayaran tidak boleh kurang dari angsuran.'
+                    );
                 }
 
                 $angsuranList = Angsuran::where('pinjaman_id', $angsuran->pinjaman_id)
                     ->where('status', 'belum_bayar')
-                    ->orderBy('angsuran_ke', 'asc')
+                    ->orderBy('angsuran_ke')
                     ->lockForUpdate()
                     ->get();
 
@@ -112,17 +132,23 @@ class AngsuranController extends Controller
                 $lastPaidAngsuran = null;
 
                 foreach ($angsuranList as $item) {
-                    if ($sisaBayar < $item->jumlah_bayar) {
+                    if ($sisaBayar < (float) $item->jumlah_bayar) {
                         break;
                     }
 
+                    // Tandai angsuran lunas menggunakan tanggal pembayaran aktual.
                     $item->update([
                         'status' => 'sudah_bayar',
-                        'tanggal_bayar' => now(),
+                        'tanggal_bayar' => $tanggalBayar->toDateString(),
                         'real_bayar' => $item->jumlah_bayar,
                     ]);
 
-                    $sudahAda = TransaksiKas::where('ref_type', 'angsuran')->where('ref_id', $item->id)->exists();
+                    $sudahAda = TransaksiKas::where('ref_type', 'angsuran')
+                        ->where('ref_id', $item->id)
+                        ->where('kategori', 'angsuran')
+                        ->where('jenis', 'masuk')
+                        ->where('status', 'berhasil')
+                        ->exists();
 
                     if (!$sudahAda) {
                         TransaksiKas::create([
@@ -132,7 +158,7 @@ class AngsuranController extends Controller
                             'kategori' => 'angsuran',
                             'jumlah' => $item->jumlah_bayar,
                             'keterangan' => 'Angsuran ke-' . $item->angsuran_ke,
-                            'tanggal' => now(),
+                            'tanggal' => $tanggalBayar,
                             'ref_type' => 'angsuran',
                             'ref_id' => $item->id,
                             'reversal_of' => null,
@@ -140,22 +166,30 @@ class AngsuranController extends Controller
                         ]);
                     }
 
-                    $sisaBayar -= $item->jumlah_bayar;
+                    $sisaBayar -= (float) $item->jumlah_bayar;
                     $lastPaidAngsuran = $item;
 
                     $pinjaman->decrement('sisa_pinjaman', $item->jumlah_bayar);
                 }
 
-                if ($lastPaidAngsuran && $sisaBayar > 0) {
+                if (!$lastPaidAngsuran) {
+                    throw new \Exception(
+                        'Tidak ada angsuran yang dapat dibayar dengan nominal tersebut.'
+                    );
+                }
+
+                // Kelebihan pembayaran masuk sebagai simpanan sukarela.
+                if ($sisaBayar > 0) {
                     $lastPaidAngsuran->update([
-                        'real_bayar' => $lastPaidAngsuran->jumlah_bayar + $sisaBayar,
+                        'real_bayar' =>
+                        (float) $lastPaidAngsuran->jumlah_bayar + $sisaBayar,
                     ]);
 
                     Simpanan::create([
                         'user_id' => $angsuran->user_id,
                         'jenis' => 'sukarela',
                         'jumlah' => $sisaBayar,
-                        'tanggal' => now(),
+                        'tanggal' => $tanggalBayar->toDateString(),
                     ]);
 
                     TransaksiKas::create([
@@ -164,8 +198,10 @@ class AngsuranController extends Controller
                         'jenis' => 'masuk',
                         'kategori' => 'simpanan',
                         'jumlah' => $sisaBayar,
-                        'keterangan' => 'Simpanan sukarela dari kelebihan angsuran ke-' . $lastPaidAngsuran->angsuran_ke,
-                        'tanggal' => now(),
+                        'keterangan' =>
+                        'Simpanan sukarela dari kelebihan pembayaran angsuran ke-' .
+                            $lastPaidAngsuran->angsuran_ke,
+                        'tanggal' => $tanggalBayar,
                         'ref_type' => 'angsuran',
                         'ref_id' => $lastPaidAngsuran->id,
                         'reversal_of' => null,
@@ -183,10 +219,130 @@ class AngsuranController extends Controller
                 }
             });
 
-            return back()->with('success', 'Pembayaran berhasil diproses');
-        } catch (\Exception $e) {
-            Log::error($e);
+            return back()->with('success', 'Pembayaran berhasil diproses.');
+        } catch (\Throwable $e) {
+            Log::error('Gagal memproses pembayaran angsuran', [
+                'angsuran_id' => $angsuran->id,
+                'error' => $e->getMessage(),
+            ]);
+
             return back()->with('error', $e->getMessage());
         }
     }
+
+
+    // public function updateStatus(Request $request, Angsuran $angsuran)
+    // {
+    //     /** @var \App\Models\User|null $admin */
+    //     $admin = Auth::user();
+    //     if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
+    //         return;
+    //     }
+
+    //     $validated = $request->validate([
+    //         'status' => 'required|in:pending,sudah_bayar',
+    //         'nominal_bayar' => 'nullable|numeric|min:0',
+    //     ]);
+
+    //     try {
+    //         DB::transaction(function () use ($angsuran, $validated) {
+    //             if ($angsuran->status === 'sudah_bayar') {
+    //                 throw new \Exception('Angsuran sudah dibayar');
+    //             }
+
+    //             $pinjaman = Pinjaman::findOrFail($angsuran->pinjaman_id);
+
+    //             $realBayar = $validated['nominal_bayar'] ?? $angsuran->jumlah_bayar;
+
+    //             if ($realBayar < $angsuran->jumlah_bayar) {
+    //                 throw new \Exception('Nominal tidak boleh kurang dari angsuran');
+    //             }
+
+    //             $angsuranList = Angsuran::where('pinjaman_id', $angsuran->pinjaman_id)
+    //                 ->where('status', 'belum_bayar')
+    //                 ->orderBy('angsuran_ke', 'asc')
+    //                 ->lockForUpdate()
+    //                 ->get();
+
+    //             $sisaBayar = $realBayar;
+    //             $lastPaidAngsuran = null;
+
+    //             foreach ($angsuranList as $item) {
+    //                 if ($sisaBayar < $item->jumlah_bayar) {
+    //                     break;
+    //                 }
+
+    //                 $item->update([
+    //                     'status' => 'sudah_bayar',
+    //                     'tanggal_bayar' => now(),
+    //                     'real_bayar' => $item->jumlah_bayar,
+    //                 ]);
+
+    //                 $sudahAda = TransaksiKas::where('ref_type', 'angsuran')->where('ref_id', $item->id)->exists();
+
+    //                 if (!$sudahAda) {
+    //                     TransaksiKas::create([
+    //                         'by_admin' => Auth::id(),
+    //                         'user_id' => $item->user_id,
+    //                         'jenis' => 'masuk',
+    //                         'kategori' => 'angsuran',
+    //                         'jumlah' => $item->jumlah_bayar,
+    //                         'keterangan' => 'Angsuran ke-' . $item->angsuran_ke,
+    //                         'tanggal' => now(),
+    //                         'ref_type' => 'angsuran',
+    //                         'ref_id' => $item->id,
+    //                         'reversal_of' => null,
+    //                         'status' => 'berhasil',
+    //                     ]);
+    //                 }
+
+    //                 $sisaBayar -= $item->jumlah_bayar;
+    //                 $lastPaidAngsuran = $item;
+
+    //                 $pinjaman->decrement('sisa_pinjaman', $item->jumlah_bayar);
+    //             }
+
+    //             if ($lastPaidAngsuran && $sisaBayar > 0) {
+    //                 $lastPaidAngsuran->update([
+    //                     'real_bayar' => $lastPaidAngsuran->jumlah_bayar + $sisaBayar,
+    //                 ]);
+
+    //                 Simpanan::create([
+    //                     'user_id' => $angsuran->user_id,
+    //                     'jenis' => 'sukarela',
+    //                     'jumlah' => $sisaBayar,
+    //                     'tanggal' => now(),
+    //                 ]);
+
+    //                 TransaksiKas::create([
+    //                     'by_admin' => Auth::id(),
+    //                     'user_id' => $angsuran->user_id,
+    //                     'jenis' => 'masuk',
+    //                     'kategori' => 'simpanan',
+    //                     'jumlah' => $sisaBayar,
+    //                     'keterangan' => 'Simpanan sukarela dari kelebihan angsuran ke-' . $lastPaidAngsuran->angsuran_ke,
+    //                     'tanggal' => now(),
+    //                     'ref_type' => 'angsuran',
+    //                     'ref_id' => $lastPaidAngsuran->id,
+    //                     'reversal_of' => null,
+    //                     'status' => 'berhasil',
+    //                 ]);
+    //             }
+
+    //             $pinjaman->refresh();
+
+    //             if ($pinjaman->sisa_pinjaman <= 0) {
+    //                 $pinjaman->update([
+    //                     'status' => 'lunas',
+    //                     'sisa_pinjaman' => 0,
+    //                 ]);
+    //             }
+    //         });
+
+    //         return back()->with('success', 'Pembayaran berhasil diproses');
+    //     } catch (\Exception $e) {
+    //         Log::error($e);
+    //         return back()->with('error', $e->getMessage());
+    //     }
+    // }
 }

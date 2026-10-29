@@ -6,26 +6,43 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 import { formatRupiah } from '@/lib/formatRupiah';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 interface Props {
     userId: number;
     nama: string;
     sisaSimpanan: number;
+    status: string;
 }
 
-export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
+export default function KeluarButton({
+    userId,
+    nama,
+    sisaSimpanan,
+    status,
+}: Props) {
+    // kode lainnya tetap seperti sebelumnya
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [inactiveAt, setInactiveAt] = useState('');
 
     const { auth } = usePage().props as any;
     const trial = auth?.roles?.some((r: string) => r === 'trial-user');
 
     const handleSubmit = () => {
+        if (!inactiveAt) {
+            toast.error('Tanggal keluar wajib diisi');
+            return;
+        }
+
         setLoading(true);
 
         router.post(
             `/anggota/${userId}/keluar`,
-            {},
+            {
+                inactive_at: inactiveAt,
+            },
             {
                 preserveScroll: true,
 
@@ -43,10 +60,15 @@ export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
                     }
 
                     setOpen(false);
+                    setInactiveAt('');
                 },
 
-                onError: () => {
-                    toast.error('Terjadi kesalahan');
+                onError: (errors) => {
+                    if (errors.inactive_at) {
+                        toast.error(errors.inactive_at);
+                    } else {
+                        toast.error('Terjadi kesalahan');
+                    }
                 },
             },
         );
@@ -54,9 +76,18 @@ export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
 
     return (
         <>
-            <Button disabled={trial} variant="destructive" size="sm" onClick={() => setOpen(true)} className="cursor-pointer">
-                Keluar
-            </Button>
+            <Button
+    disabled={trial || status === 'inactive'}
+    variant="destructive"
+    size="sm"
+    onClick={() => {
+        setInactiveAt('');
+        setOpen(true);
+    }}
+    className="cursor-pointer"
+>
+    Keluar
+</Button>
 
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent>
@@ -71,15 +102,31 @@ export default function KeluarButton({ userId, nama, sisaSimpanan }: Props) {
                                 </p>{' '}
                                 {sisaSimpanan > 0 ? (
                                     <p className="text-bk-dev">
-                                        {' '}
-                                        Sisa simpanan yang akan diterima: {formatRupiah(sisaSimpanan)}{' '}
+                                        Sisa simpanan yang akan diterima: {formatRupiah(sisaSimpanan)}
+                                    </p>
+                                ) : sisaSimpanan < 0 ? (
+                                    <p className="text-red-500">
+                                        Simpanan tidak cukup untuk menutup pinjaman. Lunasi terlebih dahulu sisa pinjaman
                                     </p>
                                 ) : (
-                                    <p className="text-yellow-300"> Simpanan tidak cukup untuk menutup pinjaman. </p>
-                                )}{' '}
+                                    <p className="text-muted-foreground">Tidak ada sisa simpanan yang diterima.</p>
+                                )}
                             </div>
                         </DialogDescription>
                     </DialogHeader>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="inactive_at">Tanggal Keluar</Label>
+
+                        <Input
+                            id="inactive_at"
+                            type="date"
+                            value={inactiveAt}
+                            onChange={(e) => setInactiveAt(e.target.value)}
+                            required
+                            disabled={loading}
+                        />
+                    </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>

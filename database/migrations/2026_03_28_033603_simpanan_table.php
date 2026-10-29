@@ -19,9 +19,7 @@ return new class extends Migration {
                 ->default('wajib')
                 ->index();
             $table->decimal('jumlah', 15, 2);
-
             $table->date('tanggal')->index();
-
             $table->timestamps();
         });
     }

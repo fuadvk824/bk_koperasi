@@ -5,6 +5,11 @@ import { formatRupiah } from '@/lib/formatRupiah';
 
 export const columnTransaksiKas = (): ColumnDef<TransaksiKas>[] => [
     {
+        id: 'nomor',
+        header: () => <div className="flex w-10! items-center justify-center">No.</div>,
+        cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
+    },
+    {
         accessorKey: 'admin.name',
         header: 'Admin',
         cell: ({ row }) => row.original.admin?.name ?? '-',
@@ -44,6 +49,10 @@ export const columnTransaksiKas = (): ColumnDef<TransaksiKas>[] => [
     {
         accessorKey: 'tanggal',
         header: 'Tanggal',
+    },
+    {
+        accessorKey: 'created_at',
+        header: 'Transaksi Kas Terbuat',
     },
 
     {

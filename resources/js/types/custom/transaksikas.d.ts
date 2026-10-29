@@ -23,4 +23,5 @@ export type TransaksiKas = {
     ref_id: number | null;
 
     status: 'pending' | 'berhasil' | 'dibatalkan';
+    create_at: string;
 };

@@ -26,16 +26,17 @@ interface Props {
     close: () => void;
     initialData?: any;
     users: User[];
+    bungaPinjamanSetting: number;
 }
 
-export default function Form({ close, initialData, users }: Props) {
+export default function Form({ close, initialData, users, bungaPinjamanSetting }: Props) {
     const route = useRoute();
     const isEdit = !!initialData;
 
     const initialState = {
         user_id: initialData?.user.id?.toString() ?? '',
         jumlah_pinjaman: initialData?.jumlah_pinjaman ?? '',
-        bunga_persen: initialData?.bunga_persen ?? '',
+        bunga_persen: initialData?.bunga_persen ?? bungaPinjamanSetting,
         lama_angsuran: initialData?.lama_angsuran ?? '',
         tanggal_pinjaman: initialData?.tanggal_pinjaman ?? '',
     };
@@ -61,7 +62,7 @@ export default function Form({ close, initialData, users }: Props) {
 
     useEffect(() => {
         const jumlah = Number(data.jumlah_pinjaman) || 0;
-        const bungaPersen = parseFloat(data.bunga_persen as any) || 0;
+        const bungaPersen = Number(bungaPinjamanSetting) || 0;
         const lama = Number(data.lama_angsuran) || 1;
 
         const bunga = (jumlah * bungaPersen) / 100;
@@ -170,16 +171,12 @@ export default function Form({ close, initialData, users }: Props) {
             </div>
 
             <div className="space-y-2">
-                <Label>Bunga (%)</Label>
-                <Input
-                    type="text"
-                    value={data.bunga_persen}
-                    onChange={(e) => {
-                        let value = e.target.value.replace(/[^0-9.,]/g, '');
-                        setData('bunga_persen', value.replace(',', '.'));
-                    }}
-                    className={cn('text-xs', errors.bunga_persen && 'border-red-500')}
-                />
+                <Label>Bunga Pinjaman (%)</Label>
+
+                <Input type="text" value={data.bunga_persen} disabled className="text-xs" />
+
+                <p className="text-xs text-muted-foreground">Bunga mengikuti pengaturan koperasi.</p>
+
                 {errors.bunga_persen && <p className="text-xs text-red-500">{errors.bunga_persen}</p>}
             </div>
 
@@ -212,7 +209,7 @@ export default function Form({ close, initialData, users }: Props) {
                         </Button>
                     </PopoverTrigger>
 
-                    <PopoverContent className="w-auto p-0" align='start'>
+                    <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                             mode="single"
                             selected={data.tanggal_pinjaman ? new Date(data.tanggal_pinjaman) : undefined}
@@ -227,7 +224,7 @@ export default function Form({ close, initialData, users }: Props) {
 
             <div className="space-y-1 rounded-lg border bg-muted p-4 text-xs">
                 <p>Total: {preview.total.toLocaleString('id-ID')}</p>
-                <p>Angsuran: {preview.angsuran.toLocaleString('id-ID')}</p>
+                <p>Angsuran: {preview.angsuran.toLocaleString('id-ID')}/bulan</p>
             </div>
 
             <DialogFooter>

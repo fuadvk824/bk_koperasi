@@ -16,9 +16,7 @@ import { useRoute } from '@/lib/route';
 import { formatRupiah } from '@/lib/formatRupiah';
 import { PaginationMeta } from '@/types/custom/pagination';
 import { Angsuran } from '@/types/custom/angsuran';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Option {
@@ -32,8 +30,10 @@ interface Props {
     };
     filters: {
         search?: string;
-        start_date?: string;
-        end_date?: string;
+        // start_date?: string;
+        // end_date?: string;
+        bulan?: string | number;
+        tahun?: string | number;
         status?: string;
         office_id?: number;
         statusPinjaman: string;
@@ -58,12 +58,21 @@ export default function Index({
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // const [localFilters, setLocalFilters] = useState({
+    //     search: filters.search ?? '',
+    //     start_date: filters.start_date ?? '',
+    //     end_date: filters.end_date ?? '',
+    //     status: filters.status,
+    //     office_id: filters.office_id ?? '',
+    //     statusPinjaman: filters.statusPinjaman ?? '',
+    //     perPage: filters.perPage ?? 10,
+    // });
     const [localFilters, setLocalFilters] = useState({
         search: filters.search ?? '',
-        start_date: filters.start_date ?? '',
-        end_date: filters.end_date ?? '',
-        status: filters.status,
-        office_id: filters.office_id ?? '',
+        bulan: filters.bulan?.toString() ?? '',
+        tahun: filters.tahun?.toString() ?? '',
+        status: filters.status ?? '',
+        office_id: filters.office_id?.toString() ?? '',
         statusPinjaman: filters.statusPinjaman ?? '',
         perPage: filters.perPage ?? 10,
     });
@@ -74,18 +83,20 @@ export default function Index({
         exportRoute: 'angsuran.export',
         allColumns: ['angsuran_ke', 'status'],
     });
-
+ 
     const handleResetFilters = () => {
         setIsRefreshing(true);
+
         setLocalFilters({
             search: '',
-            perPage: 10,
-            start_date: '',
-            end_date: '',
+            bulan: '',
+            tahun: '',
             status: '',
             office_id: '',
             statusPinjaman: '',
+            perPage: 10,
         });
+
         router.get(
             route('angsuran.index'),
             {},
@@ -95,6 +106,7 @@ export default function Index({
             },
         );
     };
+
     return (
         <AppLayout breadcrumbs={[{ title: 'Angsuran', href: route('angsuran.index') }]}>
             <Head title="Angsuran" />
@@ -115,7 +127,7 @@ export default function Index({
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 rounded-xl border p-4">
+                <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
                             <Label className="font-bold text-bk-dev">Angsuran (tanpa bunga)</Label>
@@ -191,72 +203,63 @@ export default function Index({
                         </div>
 
                         <div>
-                            <Label>Periode Terbayar</Label>
-
-                            <div className="flex items-center gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
-                                            <CalendarIcon className="mr-2 h-3 w-3" />
-                                            {localFilters.start_date
-                                                ? format(new Date(localFilters.start_date), 'dd/MM/yyyy')
-                                                : 'Pilih tanggal'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={
-                                                localFilters.start_date ? new Date(localFilters.start_date) : undefined
-                                            }
-                                            onSelect={(date) =>
-                                                handleFilterChange(
-                                                    localFilters,
-                                                    setLocalFilters,
-                                                    'start_date',
-                                                    date ? format(date, 'yyyy-MM-dd') : '',
-                                                )
-                                            }
-                                            captionLayout="dropdown"
-                                            fromYear={2020}
-                                            toYear={2050}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-
-                                <span className="text-[10px] whitespace-nowrap text-muted-foreground">s/d</span>
-
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="h-7 flex-1 justify-start p-4 font-normal">
-                                            <CalendarIcon className="mr-2 h-3 w-3" />
-                                            {localFilters.end_date
-                                                ? format(new Date(localFilters.end_date), 'dd/MM/yyyy')
-                                                : 'Pilih tanggal'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={localFilters.end_date ? new Date(localFilters.end_date) : undefined}
-                                            onSelect={(date) =>
-                                                handleFilterChange(
-                                                    localFilters,
-                                                    setLocalFilters,
-                                                    'end_date',
-                                                    date ? format(date, 'yyyy-MM-dd') : '',
-                                                )
-                                            }
-                                            captionLayout="dropdown"
-                                            fromYear={2020}
-                                            toYear={2050}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
+                            <Label>Bulan Angsuran</Label>
+                            <Select
+                                value={localFilters.bulan || 'all'}
+                                onValueChange={(value) =>
+                                    handleFilterChange(localFilters, setLocalFilters, 'bulan', value === 'all' ? '' : value)
+                                }
+                            >
+                                <SelectTrigger className="h-7 w-full p-4">
+                                    <SelectValue placeholder="Pilih Bulan" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Bulan</SelectItem>
+                                    {[
+                                        'Januari',
+                                        'Februari',
+                                        'Maret',
+                                        'April',
+                                        'Mei',
+                                        'Juni',
+                                        'Juli',
+                                        'Agustus',
+                                        'September',
+                                        'Oktober',
+                                        'November',
+                                        'Desember',
+                                    ].map((nama, index) => (
+                                        <SelectItem key={index + 1} value={(index + 1).toString()}>
+                                            {nama}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
+
+                        <div>
+                            <Label>Tahun Angsuran</Label>
+                            <Select
+                                value={localFilters.tahun || 'all'}
+                                onValueChange={(value) =>
+                                    handleFilterChange(localFilters, setLocalFilters, 'tahun', value === 'all' ? '' : value)
+                                }
+                            >
+                                <SelectTrigger className="h-7 w-full p-4">
+                                    <SelectValue placeholder="Pilih Tahun" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Tahun</SelectItem>
+                                    {Array.from({ length: 2050 - 2020 + 1 }, (_, index) => 2020 + index).map((year) => (
+                                        <SelectItem key={year} value={year.toString()}>
+                                            {year}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                       
                     </div>
                 </div>
 
@@ -268,6 +271,7 @@ export default function Index({
                     onColumnVisibilityChange={setColumnVisibility}
                     perPage={localFilters.perPage}
                     onPerPageChange={(val) => handleFilterChange(localFilters, setLocalFilters, 'perPage', val)}
+                
                 />
             </div>
         </AppLayout>

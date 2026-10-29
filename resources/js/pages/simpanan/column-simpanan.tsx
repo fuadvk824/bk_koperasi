@@ -7,6 +7,12 @@ import { formatRupiah } from '@/lib/formatRupiah';
 
 export const columnSimpanan = (openEdit: any, trial: boolean): ColumnDef<Simpanan>[] => [
     {
+        id: 'nomor',
+        header: () => <div className="flex w-10! items-center justify-center">No.</div>,
+        cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
+    },
+
+    {
         accessorKey: 'tanggal',
         header: 'Tanggal',
     },
@@ -25,7 +31,6 @@ export const columnSimpanan = (openEdit: any, trial: boolean): ColumnDef<Simpana
             return formatRupiah(row.original.jumlah);
         },
     },
-
     {
         id: 'actions',
         header: 'Actions',
@@ -33,10 +38,14 @@ export const columnSimpanan = (openEdit: any, trial: boolean): ColumnDef<Simpana
             const data = row.original;
 
             return (
-                <Button onClick={() => openEdit(data)} disabled={trial} className="cursor-pointer hover:scale-105">
+                <Button
+                    onClick={() => openEdit(data)}
+                    // disabled={trial}
+                    disabled
+                    className="cursor-pointer hover:scale-105"
+                >
                     <SquarePen size={16} /> Edit
                 </Button>
-                
             );
         },
     },

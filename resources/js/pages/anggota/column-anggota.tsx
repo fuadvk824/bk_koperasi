@@ -6,6 +6,11 @@ import KeluarButton from './KeluarButton';
 
 export const columnAnggota = (): ColumnDef<Anggota>[] => [
     {
+        id: 'nomor',
+        header: () => <div className="flex w-10! items-center justify-center">No.</div>,
+        cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
+    },
+    {
         accessorKey: 'nama',
         header: 'Nama',
     },
@@ -36,21 +41,26 @@ export const columnAnggota = (): ColumnDef<Anggota>[] => [
     },
     {
         accessorKey: 'total_pinjaman',
-        header: 'Pinjaman',
+        header: 'Sisa Pinjaman',
         cell: ({ row }) => formatRupiah(row.original.total_pinjaman),
     },
     {
         accessorKey: 'total_angsuran',
-        header: 'Angsuran',
+        header: 'Angsuran Terbayar',
         cell: ({ row }) => formatRupiah(row.original.total_angsuran),
     },
-    {
-        id: 'action',
-        header: 'Action',
-        cell: ({ row }) => {
-            return (
-                <KeluarButton userId={row.original.id} nama={row.original.nama} sisaSimpanan={row.original.sisa_simpanan} />
-            );
-        },
+   {
+    id: 'action',
+    header: 'Action',
+    cell: ({ row }) => {
+        return (
+            <KeluarButton
+                userId={row.original.id}
+                nama={row.original.nama}
+                sisaSimpanan={row.original.sisa_simpanan}
+                status={row.original.status}
+            />
+        );
     },
+},
 ];

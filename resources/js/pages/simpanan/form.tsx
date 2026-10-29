@@ -16,32 +16,56 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-import { format } from "date-fns"
-import { CalendarIcon } from "lucide-react"
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
 
-import { Calendar } from "@/components/ui/calendar"
+import { Calendar } from '@/components/ui/calendar';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Props {
     close: () => void;
     initialData?: any;
     users: { id: number; name: string }[];
+    simpananWajibSetting: number;
 }
 
-export default function Form({ close, initialData, users }: Props) {
+export default function Form({ close, initialData, users, simpananWajibSetting }: Props) {
     const route = useRoute();
     const isEdit = !!initialData;
 
     const initialState = {
         user_id: initialData?.user_id?.toString() ?? '',
         jenis: initialData?.jenis ?? 'wajib',
-        jumlah: initialData?.jumlah ?? '',
+        // jumlah: initialData?.jumlah ?? '',
+        jumlah: initialData?.jumlah ?? simpananWajibSetting,
         tanggal: initialData?.tanggal ?? '',
+        custom_jumlah: initialData ? true : false,
     };
 
     const { data, setData, post, put, processing, reset } = useForm(initialState);
 
-    const [errors, setErrors] = useState<any>({});
+    const handleJenisChange = (value: string) => {
+        if (value === 'wajib') {
+            setData({
+                ...data,
+                jenis: 'wajib',
+                jumlah: data.custom_jumlah ? data.jumlah : simpananWajibSetting,
+            });
 
+            return;
+        }
+
+        if (value === 'modal') {
+            setData({
+                ...data,
+                jenis: 'modal',
+                jumlah: '',
+                custom_jumlah: false,
+            });
+        }
+    };
+
+    const [errors, setErrors] = useState<any>({});
     const selectedUser = users.find((u) => u.id === Number(data.user_id));
 
     const isDataChanged = () => {
@@ -142,17 +166,39 @@ export default function Form({ close, initialData, users }: Props) {
             <div className="space-y-2">
                 <Label>Jenis</Label>
 
-                <Select value={data.jenis} onValueChange={(value) => setData('jenis', value)}>
-                    <SelectTrigger className={cn(errors.jenis && 'border-red-500')}>
-                        <SelectValue />
+                <Select value={data.jenis} onValueChange={handleJenisChange}>
+                    <SelectTrigger className={`${cn(errors.jenis && 'border-red-500')} w-full`}>
+                        <SelectValue placeholder="Pilih jenis" />
                     </SelectTrigger>
 
-                    <SelectContent align='start'>
+                    <SelectContent align="start">
                         <SelectItem value="wajib">Wajib</SelectItem>
-                        <SelectItem value="sukarela">Sukarela</SelectItem>
+
                         <SelectItem value="modal">Modal</SelectItem>
                     </SelectContent>
                 </Select>
+
+                {data.jenis === 'wajib' && (
+                    <div className="flex items-center gap-2">
+                        <Checkbox
+                            id="custom_jumlah"
+                            checked={Boolean(data.custom_jumlah)}
+                            onCheckedChange={(checked) => {
+                                const custom = checked === true;
+
+                                setData({
+                                    ...data,
+                                    custom_jumlah: custom,
+                                    jumlah: custom ? data.jumlah : simpananWajibSetting,
+                                });
+                            }}
+                        />
+
+                        <Label htmlFor="custom_jumlah" className="cursor-pointer font-normal">
+                            Gunakan jumlah custom
+                        </Label>
+                    </div>
+                )}
 
                 {errors.jenis && <p className="text-xs text-red-500">{errors.jenis}</p>}
             </div>
@@ -163,12 +209,18 @@ export default function Form({ close, initialData, users }: Props) {
                 <Input
                     type="text"
                     value={formatRupiah(data.jumlah || 0)}
+                    disabled={data.jenis === 'wajib' && !data.custom_jumlah}
                     onChange={(e) => {
                         const raw = e.target.value.replace(/[^0-9]/g, '');
-                        setData('jumlah', Number(raw));
+
+                        setData('jumlah', raw ? Number(raw) : 0);
                     }}
                     className={cn('text-xs', errors.jumlah && 'border-red-500')}
                 />
+
+                {data.jenis === 'wajib' && !data.custom_jumlah && (
+                    <p className="text-xs text-muted-foreground">Nominal mengikuti pengaturan simpanan wajib koperasi.</p>
+                )}
 
                 {errors.jumlah && <p className="text-xs text-red-500">{errors.jumlah}</p>}
             </div>
@@ -191,7 +243,7 @@ export default function Form({ close, initialData, users }: Props) {
                         </Button>
                     </PopoverTrigger>
 
-                    <PopoverContent className="w-auto p-0" align='start'>
+                    <PopoverContent className="w-auto p-0" align="start">
                         <Calendar
                             mode="single"
                             selected={data.tanggal ? new Date(data.tanggal) : undefined}
@@ -205,10 +257,10 @@ export default function Form({ close, initialData, users }: Props) {
             </div>
 
             <DialogFooter>
-                <Button type="button" variant="outline" onClick={close} className='cursor-pointer'>
+                <Button type="button" variant="outline" onClick={close} className="cursor-pointer">
                     Batal
                 </Button>
-                <Button type="submit" disabled={processing} className='cursor-pointer'>
+                <Button type="submit" disabled={processing} className="cursor-pointer">
                     Simpan
                 </Button>
             </DialogFooter>

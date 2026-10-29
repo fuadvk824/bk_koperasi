@@ -1,10 +1,15 @@
 <?php
 
+use App\Http\Controllers\PengaturanKoperasiController;
 use App\Http\Controllers\Web\AnggotaController;
 use App\Http\Controllers\Web\AngsuranController;
 use App\Http\Controllers\Web\BerandaController;
+use App\Http\Controllers\Web\DevAktiflamaDatabaruController;
+use App\Http\Controllers\Web\DevInactiveNodataController;
 use App\Http\Controllers\Web\PinjamanController;
+use App\Http\Controllers\Web\RiwayatAktivitasController;
 use App\Http\Controllers\Web\SimpananController;
+use App\Http\Controllers\Web\SimpananDuplikatController;
 use App\Http\Controllers\Web\TransaksiKasController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\UserPreferenceController;
@@ -17,7 +22,7 @@ Route::inertia('/', 'welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-   
+
     Route::get('/user/bg', [UserPreferenceController::class, 'show']);
     Route::post('/user/bg', [UserPreferenceController::class, 'update']);
 
@@ -39,10 +44,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::put('/{user}/update', [UserController::class, 'update'])->name('update');
                 Route::post('/user-management', [UserController::class, 'store'])
                     ->name('store');
+
+                Route::put(
+                    '/pengaturan-koperasi',
+                    [UserController::class, 'updatePengaturanKoperasi']
+                )->name('pengaturanKoperasi.update');
             });
     });
     Route::middleware(['role:super-admin|admin|trial-user'])->group(function () {
-         Route::get('/dashboard', [BerandaController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [BerandaController::class, 'index'])->name('dashboard');
         Route::prefix('simpanan')
             ->name('simpanan.')
             ->group(function () {
@@ -81,6 +91,41 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->group(function () {
                 Route::get('/', [TransaksiKasController::class, 'index'])->name('index');
                 Route::post('/', [TransaksiKasController::class, 'store'])->name('store');
+            });
+
+        Route::middleware(['auth', 'role:super-admin'])
+            ->group(function () {
+                Route::get(
+                    '/riwayat-aktivitas',
+                    [DevAktiflamaDatabaruController::class, 'index']
+                )->name('riwayat-aktivitas.index');
+
+                Route::get(
+                    '/inactive-nodata',
+                    [DevInactiveNodataController::class, 'index']
+                )->name('inactive-nodata.index');
+
+                Route::delete(
+                    '/inactive-nodata/{id}',
+                    [DevInactiveNodataController::class, 'destroy']
+                )->whereNumber('id')
+                    ->name('inactive-nodata.destroy');
+
+                Route::delete(
+                    '/inactive-nodata/bulk-delete',
+                    [DevInactiveNodataController::class, 'bulkDestroy']
+                )->name('inactive-nodata.bulk-destroy');
+
+
+                Route::get(
+                    '/simpanan-duplikat',
+                    [SimpananDuplikatController::class, 'index']
+                )->name('simpanan-duplikat.index');
+
+                Route::patch(
+                    '/simpanan-duplikat/{simpanan}/pindah-bulan',
+                    [SimpananDuplikatController::class, 'update']
+                )->name('simpanan-duplikat.pindah-bulan');
             });
     });
 });

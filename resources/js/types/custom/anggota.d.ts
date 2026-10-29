@@ -9,4 +9,5 @@ export type Anggota = {
     simpanan_sukarela: number;
     simpanan_modal: number;
     sisa_simpanan: number;
+    status: 'active' | 'inactive';
 };

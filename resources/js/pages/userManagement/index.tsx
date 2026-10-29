@@ -7,7 +7,7 @@ import type { VisibilityState } from '@tanstack/react-table';
 import { DataTable } from '@/components/table/datatable';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, ScrollText, UserPlus } from 'lucide-react';
+import { RefreshCw, ScrollText, Settings, UserPlus } from 'lucide-react';
 
 import { columnUser } from './column-user';
 import { useTableActions } from '@/lib/useTableAction';
@@ -23,6 +23,7 @@ import { ActivityLog } from '@/types/custom/activityLog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import FormCreate from './form-create';
+import FormPengaturan from './form-pengaturan';
 
 interface Option {
     id: number;
@@ -34,16 +35,31 @@ interface Props {
         data: UserManagement[];
         meta: PaginationMeta;
     };
+    // filters: {
+    //     search?: string;
+    //     office_id?: number | string;
+    //     status: string;
+    //     perPage?: number;
+    // };
+
     filters: {
         search?: string;
         office_id?: number | string;
-        status: string;
+        status?: string;
+        bulan?: number | string;
+        tahun?: number | string;
         perPage?: number;
     };
     roles: Role[];
     offices: Option[];
     totalAnggota: number;
     activityLogs: ActivityLog[];
+
+    pengaturanKoperasi: {
+        id: number;
+        simpanan_wajib: number | string;
+        bunga_pinjaman: number | string;
+    };
 }
 
 const formatLog = (data: any) => {
@@ -63,7 +79,7 @@ const formatLog = (data: any) => {
     });
 };
 
-export default function Index({ users, roles, filters, offices, totalAnggota, activityLogs }: Props) {
+export default function Index({ users, roles, filters, offices, totalAnggota, activityLogs, pengaturanKoperasi }: Props) {
     const route = useRoute();
     const { auth } = usePage().props as any;
     const isSuperAdmin = auth?.roles?.some((r: string) => r === 'super-admin');
@@ -73,14 +89,41 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
     const [open, setOpen] = useState(false);
     const [open1, setOpen1] = useState(false);
     const [open2, setOpen2] = useState(false);
+    const [openPengaturan, setOpenPengaturan] = useState(false);
 
     const [selected, setSelected] = useState<UserManagement | null>(null);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const daftarBulan = [
+        { value: '1', label: 'Januari' },
+        { value: '2', label: 'Februari' },
+        { value: '3', label: 'Maret' },
+        { value: '4', label: 'April' },
+        { value: '5', label: 'Mei' },
+        { value: '6', label: 'Juni' },
+        { value: '7', label: 'Juli' },
+        { value: '8', label: 'Agustus' },
+        { value: '9', label: 'September' },
+        { value: '10', label: 'Oktober' },
+        { value: '11', label: 'November' },
+        { value: '12', label: 'Desember' },
+    ];
+
+    const daftarTahun = Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) =>
+        String(new Date().getFullYear() - i),
+    );
+    // const [localFilters, setLocalFilters] = useState({
+    //     search: filters.search ?? '',
+    //     office_id: filters.office_id ?? '',
+    //     status: filters.status ?? '',
+    //     perPage: filters.perPage ?? 10,
+    // });
 
     const [localFilters, setLocalFilters] = useState({
         search: filters.search ?? '',
-        office_id: filters.office_id ?? '',
+        office_id: filters.office_id?.toString() ?? '',
         status: filters.status ?? '',
+        bulan: String(filters.bulan ?? new Date().getMonth() + 1),
+        tahun: String(filters.tahun ?? new Date().getFullYear()),
         perPage: filters.perPage ?? 10,
     });
 
@@ -91,13 +134,30 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
         allColumns: ['name', 'email', 'roles'],
     });
 
+    // const handleResetFilters = () => {
+    //     setIsRefreshing(true);
+    //     setLocalFilters({ search: '', perPage: 10, office_id: '', status: '' });
+
+    //     router.get(
+    //         route('userManagement.index'),
+    //         {},
+    //         {
+    //             replace: true,
+    //             onFinish: () => setIsRefreshing(false),
+    //         },
+    //     );
+    // };
+
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, office_id: '', status: '' });
 
         router.get(
             route('userManagement.index'),
-            {},
+            {
+                bulan: new Date().getMonth() + 1,
+                tahun: new Date().getFullYear(),
+                perPage: 10,
+            },
             {
                 replace: true,
                 onFinish: () => setIsRefreshing(false),
@@ -123,6 +183,12 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                             <span className="hidden sm:inline">Refresh</span>
                         </Button>
+
+                        <Button onClick={() => setOpenPengaturan(true)} className="cursor-pointer">
+                            <Settings className="h-4 w-4" />
+                            <span className="hidden sm:inline">Setting</span>
+                        </Button>
+
                         <Button onClick={() => setOpen1(true)} className="cursor-pointer">
                             <ScrollText className="h-4 w-4" /> <span className="hidden sm:inline">Log</span>
                         </Button>
@@ -134,7 +200,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 rounded-xl border p-4">
+                <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
                             <Label className="font-bold text-bk-dev">Total Anggota</Label>
@@ -188,6 +254,68 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 </SelectContent>
                             </Select>
                         </div>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div>
+                                <Label>Bulan Aktif</Label>
+                                <Select
+                                    value={localFilters.bulan}
+                                    onValueChange={(value) => setLocalFilters((prev) => ({ ...prev, bulan: value }))}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Pilih bulan" />
+                                    </SelectTrigger>
+                                    <SelectContent align='start'>
+                                        {daftarBulan.map((bulan) => (
+                                            <SelectItem key={bulan.value} value={bulan.value}>
+                                                {bulan.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div>
+                                <Label>Tahun Aktif</Label>
+                                <Select
+                                    value={localFilters.tahun}
+                                    onValueChange={(value) => setLocalFilters((prev) => ({ ...prev, tahun: value }))}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Pilih tahun" />
+                                    </SelectTrigger>
+                                    <SelectContent align='start'>
+                                        {daftarTahun.map((tahun) => (
+                                            <SelectItem key={tahun} value={tahun}>
+                                                {tahun}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex items-end">
+                                <Button
+                                    className="w-full"
+                                    onClick={() =>
+                                        router.get(
+                                            route('userManagement.index'),
+                                            {
+                                                ...localFilters,
+                                                bulan: localFilters.bulan,
+                                                tahun: localFilters.tahun,
+                                            },
+                                            {
+                                                preserveState: true,
+                                                preserveScroll: true,
+                                                replace: true,
+                                            },
+                                        )
+                                    }
+                                >
+                                    Terapkan Filter
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -211,8 +339,8 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                 <Dialog open={open2} onOpenChange={setOpen2}>
                     <DialogContent>
                         <DialogHeader>
-                            <DialogTitle>Tambah User</DialogTitle>
-                            <DialogDescription>Tambahkan user baru</DialogDescription>
+                            <DialogTitle>Tambah Anggota</DialogTitle>
+                            <DialogDescription>Tambahkan anggota baru koperasi</DialogDescription>
                         </DialogHeader>
 
                         <FormCreate close={() => setOpen2(false)} offices={offices} roles={roles} />
@@ -274,6 +402,20 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 ))
                             )}
                         </div>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={openPengaturan} onOpenChange={setOpenPengaturan}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Pengaturan Koperasi</DialogTitle>
+
+                            <DialogDescription>
+                                Ubah nominal simpanan wajib dan persentase bunga pinjaman koperasi.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <FormPengaturan close={() => setOpenPengaturan(false)} initialData={pengaturanKoperasi} />
                     </DialogContent>
                 </Dialog>
 

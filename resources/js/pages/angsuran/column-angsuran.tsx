@@ -21,6 +21,7 @@ import { formatRupiah } from '@/lib/formatRupiah';
 import { Input } from '@/components/ui/input';
 import { useState, useEffect } from 'react';
 import { BookmarkCheck } from 'lucide-react';
+import { format } from 'date-fns';
 
 const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
     const route = useRoute();
@@ -33,6 +34,8 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
 
     const kelipatan = Math.floor(nominal / angsuran.jumlah_bayar);
     const sisa = nominal % angsuran.jumlah_bayar;
+
+    const [tanggalBayar, setTanggalBayar] = useState(format(new Date(), 'yyyy-MM-dd'));
 
     useEffect(() => {
         if (!isCustom) {
@@ -50,11 +53,31 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
     const handleUpdate = () => {
         if (error) return;
 
+        // router.patch(
+        //     route('angsuran.updateStatus', { angsuran: angsuran.id }),
+        //     {
+        //         status: 'sudah_bayar',
+        //         nominal_bayar: isCustom ? nominal : angsuran.jumlah_bayar,
+        //     },
+        //     {
+        //         preserveScroll: true,
+        //         onSuccess: (page) => {
+        //             const flash = page.props.flash as {
+        //                 success?: string;
+        //                 error?: string;
+        //             };
+
+        //             if (flash.success) toast.success(flash.success);
+        //             if (flash.error) toast.error(flash.error);
+        //         },
+        //     },
+        // );
         router.patch(
             route('angsuran.updateStatus', { angsuran: angsuran.id }),
             {
                 status: 'sudah_bayar',
-                nominal_bayar: isCustom ? nominal : angsuran.jumlah_bayar,
+                nominal_bayar: isCustom ? nominal : Number(angsuran.jumlah_bayar),
+                tanggal_bayar: tanggalBayar,
             },
             {
                 preserveScroll: true,
@@ -87,6 +110,25 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
                         Centang opsi dibawah ini jika pembayaran lebih dari nominal angsuran
                     </AlertDialogDescription>
                 </AlertDialogHeader>
+
+                <div className="space-y-2">
+                    <label htmlFor={`tanggal-bayar-${angsuran.id}`} className="text-sm font-medium">
+                        Tanggal Pembayaran Sebenarnya
+                    </label>
+
+                    <Input
+                        id={`tanggal-bayar-${angsuran.id}`}
+                        type="date"
+                        value={tanggalBayar}
+                        max={format(new Date(), 'yyyy-MM-dd')}
+                        onChange={(e) => setTanggalBayar(e.target.value)}
+                        required
+                    />
+
+                    <p className="text-xs text-muted-foreground">
+                        Pilih tanggal anggota benar-benar membayar, bukan tanggal admin melakukan approve.
+                    </p>
+                </div>
 
                 <div className="space-y-3">
                     <label className="flex cursor-pointer items-center gap-2 text-xs">
@@ -148,6 +190,11 @@ const ActionCell = ({ angsuran }: { angsuran: Angsuran }) => {
 export default ActionCell;
 
 export const columnAngsuran = (): ColumnDef<Angsuran>[] => [
+    {
+        id: 'nomor',
+        header: () => <div className="flex w-10! items-center justify-center">No.</div>,
+        cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
+    },
     {
         accessorKey: 'nama_user',
         header: 'Nama',

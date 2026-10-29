@@ -33,9 +33,10 @@ createInertiaApp({
     //         </BackgroundProvider>
     //     );
     // },
-
+ 
     progress: {
-        color: '#4B5563',
+        // color: '#4B5563',
+        color: '#ffd000',
     },
 });
 

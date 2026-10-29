@@ -43,6 +43,10 @@ class TransaksiKasController extends Controller
             })
             ->when($request->kategori, function ($q) use ($request) {
                 $q->where('kategori', $request->kategori);
+            })
+            ->when($request->start_date && $request->end_date, function ($q) use ($request) {
+                $q->whereDate('tanggal', '>=', $request->start_date)
+                    ->whereDate('tanggal', '<=', $request->end_date);
             });
 
         $data = (clone $query)->orderBy('tanggal', 'desc')->paginate($perPage)->withQueryString();
@@ -60,6 +64,8 @@ class TransaksiKasController extends Controller
 
             'filters' => [
                 'search' => $request->search,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
                 'perPage' => $perPage,
                 'jenis' => $request->jenis,
                 'kategori' => $request->kategori,

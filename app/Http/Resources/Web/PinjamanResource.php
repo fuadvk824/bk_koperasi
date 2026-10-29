@@ -31,7 +31,7 @@ class PinjamanResource extends JsonResource
             'lama_angsuran' => $this->lama_angsuran, 
 
             'tanggal_pinjaman' => $this->tanggal_pinjaman->format('Y-m-d'),
-            'jatuh_tempo_terakhir' => $this->jatuh_tempo_terakhir->format('Y-m-d'), 
+            'jatuh_tempo_terakhir' => $this->jatuh_tempo_terakhir?->format('Y-m-d'), 
 
             'status' => $this->status,
         ];

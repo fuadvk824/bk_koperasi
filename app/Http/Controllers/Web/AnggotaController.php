@@ -18,17 +18,21 @@ class AnggotaController extends Controller
 {
     public function index(Request $request)
     {
+        $statusUser = $request->input('statusUser', 'active');
         $perPage = $request->input('perPage', 10);
 
         $anggota = User::query()
             ->with('office:id,name')
-            ->where('status', 'active')
+            // ->where('status', 'active')
 
             ->when($request->search, function ($q) use ($request) {
                 $q->where('name', 'like', '%' . $request->search . '%');
             })
             ->when($request->office_id, function ($q) use ($request) {
                 $q->where('office_id', $request->office_id);
+            })
+            ->when($statusUser !== 'all', function ($q) use ($statusUser) {
+                $q->where('status', $statusUser);
             })
 
             ->withSum('simpanan', 'jumlah')
@@ -80,8 +84,7 @@ class AnggotaController extends Controller
         ]);
     }
 
-
-    public function keluar(User $user)
+    public function keluar(User $user, Request $request)
     {
         /** @var \App\Models\User|null $admin */
         $admin = Auth::user();
@@ -89,8 +92,11 @@ class AnggotaController extends Controller
         if (!$admin || !$admin->hasAnyRole(['super-admin', 'admin'])) {
             return;
         }
-        
-        return DB::transaction(function () use ($user) {
+        $validated = $request->validate([
+            'inactive_at' => ['required', 'date'],
+        ]);
+
+        return DB::transaction(function () use ($user, $validated) {
 
             if ($user->status === 'inactive') {
                 return back()->with('error', 'User sudah nonaktif');
@@ -201,6 +207,7 @@ class AnggotaController extends Controller
 
             $user->update([
                 'status' => 'inactive',
+                'inactive_at' => $validated['inactive_at'],
             ]);
 
             return back()->with('success', 'Anggota keluar, simpanan dialihkan ke angsuran & sisa dibayarkan');

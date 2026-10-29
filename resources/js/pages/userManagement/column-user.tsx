@@ -12,9 +12,21 @@ const formatRoleName = (name: string) => {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
 };
+const formatDate = (date: string | null | undefined) => {
+    if (!date) return '-';
+
+    const [year, month, day] = date.slice(0, 10).split('-');
+
+    return `${day}-${month}-${year}`;
+};
 
 export const columnUser = (onEdit: any, isSuperAdmin: boolean): ColumnDef<UserManagement>[] => {
     const columns: ColumnDef<UserManagement>[] = [
+        {
+            id: 'nomor',
+            header: () => <div className="flex w-10! items-center justify-center">No.</div>,
+            cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
+        },
         {
             accessorKey: 'name',
             header: 'Nama',
@@ -53,6 +65,17 @@ export const columnUser = (onEdit: any, isSuperAdmin: boolean): ColumnDef<UserMa
     }
 
     columns.push(
+        {
+            accessorKey: 'active_at',
+            header: 'Tanggal Aktif',
+            cell: ({ row }) => <div className="whitespace-nowrap">{formatDate(row.original.active_at)}</div>,
+        },
+        {
+            accessorKey: 'inactive_at',
+            header: 'Tanggal Nonaktif',
+            cell: ({ row }) => <div className="whitespace-nowrap">{formatDate(row.original.inactive_at)}</div>,
+        },
+
         {
             accessorKey: 'status',
             header: 'Status',

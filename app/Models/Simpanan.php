@@ -16,9 +16,12 @@ class Simpanan extends Model
         'jenis',
         'jumlah',
         'tanggal',
+        'status',
+        'bukti_transfer',
     ];
 
     protected $casts = [
+        'diproses_at' => 'date:Y-m-d',
         'tanggal' => 'date:Y-m-d',
         'jumlah' => 'decimal:2',
     ];
@@ -27,6 +30,4 @@ class Simpanan extends Model
     {
         return $this->belongsTo(User::class);
     }
-
-   
 }

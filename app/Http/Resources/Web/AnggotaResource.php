@@ -32,6 +32,7 @@ class AnggotaResource extends JsonResource
 
              
             'sisa_simpanan' => $totalSimpanan - $totalPinjaman,
+            'status' => $this->status,
         ];
     }
 }

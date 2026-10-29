@@ -13,4 +13,7 @@ export type UserManagement = {
         id: number;
         name: string;
     };
+active_at: string | null;
+inactive_at: string | null;
+
 };

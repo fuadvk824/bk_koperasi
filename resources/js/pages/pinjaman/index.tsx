@@ -40,12 +40,24 @@ interface Props {
     };
     users: Option[];
     offices: Option[];
+
     jumlah_pinjaman: number;
     total_pinjaman: number;
     sisa_pinjaman: number;
+
+    bungaPinjamanSetting: number;
 }
 
-export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total_pinjaman, sisa_pinjaman, offices }: Props) {
+export default function Index({
+    pinjaman,
+    filters,
+    users,
+    jumlah_pinjaman,
+    total_pinjaman,
+    sisa_pinjaman,
+    offices,
+    bungaPinjamanSetting,
+}: Props) {
     const route = useRoute();
     const { auth } = usePage().props as any;
     const trial = auth?.roles?.some((r: string) => r === 'trial-user');
@@ -61,7 +73,7 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
         end_date: filters.end_date ?? '',
         status: filters.status,
         office_id: filters.office_id ?? '',
-        statusUser: filters.statusUser ?? '',
+        statusUser: filters.statusUser ?? 'active',
 
         perPage: filters.perPage ?? 10,
     });
@@ -82,16 +94,32 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
             end_date: '',
             status: '',
             office_id: '',
-            statusUser: '',
+            statusUser: 'active',
         });
         router.get(
             route('pinjaman.index'),
-            {},
+            { statusUser: 'active' },
             {
                 replace: true,
                 onFinish: () => setIsRefreshing(false),
             },
         );
+    };
+
+    const handleStatusUserChange = (value: string) => {
+        const updated = {
+            ...localFilters,
+            statusUser: value,
+            page: 1,
+        };
+
+        setLocalFilters(updated);
+
+        router.get(route('pinjaman.index'), updated, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
     };
 
     const openCreate = () => {
@@ -121,15 +149,14 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                         <Button disabled variant="outline" onClick={() => handleExport(columnVisibility)}>
                             <FileSpreadsheet className="h-4 w-4" /> <span className="hidden sm:inline">Export</span>
                         </Button>
-                        
-                            <Button onClick={openCreate} disabled={trial} className="cursor-pointer">
-                                <FilePlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
-                            </Button>
-                     
+
+                        <Button onClick={openCreate} disabled={trial} className="cursor-pointer">
+                            <FilePlus className="h-4 w-4" /> <span className="hidden sm:inline">Tambah</span>
+                        </Button>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 rounded-xl border p-4">
+                <div className="flex flex-col gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm">
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                         <div>
                             <Label className="font-bold text-bk-dev">Total Pinjaman (tanpa bunga)</Label>
@@ -205,12 +232,7 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                         </div>
                         <div>
                             <Label>Status Anggota</Label>
-                            <Select
-                                value={localFilters.statusUser ?? 'all'}
-                                onValueChange={(value) =>
-                                    handleFilterChange(localFilters, setLocalFilters, 'statusUser', value)
-                                }
-                            >
+                            <Select value={localFilters.statusUser ?? 'active'} onValueChange={handleStatusUserChange}>
                                 <SelectTrigger className="h-7 w-full p-4">
                                     <SelectValue placeholder="Pilih Status" />
                                 </SelectTrigger>
@@ -298,7 +320,12 @@ export default function Index({ pinjaman, filters, users, jumlah_pinjaman, total
                         </DialogHeader>
                         <DialogDescription>Silahkan lengkapi data pinjaman</DialogDescription>
 
-                        <Form close={() => setOpen(false)} initialData={selected ?? undefined} users={users} />
+                        <Form
+                            close={() => setOpen(false)}
+                            initialData={selected ?? undefined}
+                            users={users}
+                            bungaPinjamanSetting={bungaPinjamanSetting}
+                        />
                     </DialogContent>
                 </Dialog>
 

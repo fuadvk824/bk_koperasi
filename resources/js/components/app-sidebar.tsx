@@ -8,6 +8,7 @@ import {
     Contact,
     Store,
     ShieldCheck,
+    FolderCode,
 } from 'lucide-react';
 
 import AppLogo from '@/components/app-logo';
@@ -98,6 +99,26 @@ export function AppSidebar() {
             icon: ShieldCheck,
             roles: ['super-admin', 'admin'],
         },
+
+        {
+            title: 'Developer',
+            icon: FolderCode,
+            roles: ['super-admin'],
+            children: [
+                {
+                    title: 'Aktif Lama Data Baru',
+                    href: '/riwayat-aktivitas',
+                },
+                {
+                    title: 'Nonaktif Tanpa Data',
+                    href: '/inactive-nodata',
+                },
+                {
+                    title: 'Simpanan Duplikat',
+                    href: '/simpanan-duplikat',
+                },
+            ],
+        },
     ];
 
     const filteredNavItems = mainNavItems.filter((item) => {
@@ -126,7 +147,7 @@ export function AppSidebar() {
             variant="inset"
             className={`${bg === 'gradient' ? 'bg-transparent [&_*]:bg-transparent' : ''}`}
         >
-            <SidebarHeader className='bg-transparent'>
+            <SidebarHeader className="bg-transparent">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
@@ -137,7 +158,7 @@ export function AppSidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarHeader>
-            <div className="h-px w-full border-t mb-3" />
+            <div className="mb-3 h-px w-full border-t" />
             <SidebarContent>
                 <NavMain items={filteredNavItems} />
             </SidebarContent>

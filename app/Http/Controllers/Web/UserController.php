@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\Web\UserResource;
 use App\Models\ActivityLog;
 use App\Models\Office;
+use App\Models\PengaturanKoperasi;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,56 +18,156 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
+
+
     public function index(Request $request)
     {
         $perPage = $request->input('perPage', 10);
+        $bulan = (int) ($request->input('bulan') ?: now()->month);
+        $tahun = (int) ($request->input('tahun') ?: now()->year);
 
+        $awalBulan = Carbon::create($tahun, $bulan, 1)->startOfMonth()->toDateString();
+        $akhirBulan = Carbon::create($tahun, $bulan, 1)->endOfMonth()->toDateString();
         $query = User::with(['roles:id,name', 'office:id,name'])
-            ->when($request->search, function ($q) use ($request) {
-                $q->where(function ($query) use ($request) {
-                    $query
-                        ->where('name', 'like', '%' . $request->search . '%')
-                        ->orWhere('email', 'like', '%' . $request->search . '%');
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->search;
+
+                $q->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
                 });
             })
-            ->when($request->office_id, function ($q) use ($request) {
-                $q->where('office_id', $request->office_id);
-            })
-            ->when($request->status, function ($q) use ($request) {
-                $q->where('status', $request->status);
-            });
+            ->when(
+                $request->filled('office_id') && $request->office_id !== 'all',
+                fn($q) => $q->where('office_id', $request->office_id)
+            )
+            ->when(
+                $request->filled('status') && $request->status !== 'all',
+                fn($q) => $q->where('status', $request->status)
+            )
+            // User sudah aktif sebelum atau selama bulan terpilih
+            ->whereNotNull('active_at')
+            ->whereDate('active_at', '<=', $akhirBulan)
 
-        $data = (clone $query)->latest()->paginate($perPage)->withQueryString();
+            // User belum nonaktif pada awal bulan terpilih
+            ->where(function ($q) use ($awalBulan) {
+                $q->whereNull('inactive_at')
+                    ->orWhereDate('inactive_at', '>=', $awalBulan);
+            })
+            ->orderBy('name', 'asc');
+
+        $data = (clone $query)
+            ->paginate($perPage)
+            ->withQueryString();
 
         $totalAnggota = (clone $query)->count();
 
         $activityLogs = ActivityLog::with(['admin:id,name', 'user:id,name'])
             ->latest()
             ->get()
-
             ->map(function ($log) {
                 return [
                     'admin' => $log->admin->name ?? '-',
                     'user' => $log->user->name ?? '-',
                     'jenis_update' => $log->jenis_update,
-                    'created_at' => $log->created_at->format('Y:m:d H:i:s'),
+                    'created_at' => $log->created_at?->format('Y-m-d H:i:s'),
                     'old' => $this->transformLog($log->old),
                     'new' => $this->transformLog($log->new),
                 ];
             });
 
+        $pengaturanKoperasi = PengaturanKoperasi::firstOrCreate(
+            [],
+            [
+                'simpanan_wajib' => 0,
+                'bunga_pinjaman' => 0,
+            ]
+        );
+
         return Inertia::render('userManagement/index', [
             'users' => UserResource::collection($data)->response()->getData(true),
-
             'filters' => [
                 'search' => $request->search,
-                'perPage' => $perPage,
+                'office_id' => $request->office_id,
+                'status' => $request->status,
+                'bulan' => $bulan,
+                'tahun' => $tahun,
+                'perPage' => (int) $perPage,
             ],
+
             'offices' => Office::select('id', 'name')->orderBy('name')->get(),
             'roles' => Role::all(),
             'totalAnggota' => $totalAnggota,
             'activityLogs' => $activityLogs,
+            'pengaturanKoperasi' => $pengaturanKoperasi,
         ]);
+    }
+
+    public function updatePengaturanKoperasi(Request $request)
+    {
+        $validated = $request->validate([
+            'simpanan_wajib' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:9999999999999.99',
+            ],
+            'bunga_pinjaman' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:999.99',
+            ],
+        ]);
+
+        DB::transaction(function () use ($validated) {
+            // Pengaturan baru selalu berlaku mulai awal bulan ini.
+            $awalBulanIni = now()->startOfMonth()->toDateString();
+            $akhirBulanLalu = now()
+                ->startOfMonth()
+                ->subDay()
+                ->toDateString();
+
+            // Kunci baris pengaturan untuk menghindari perubahan bersamaan.
+            $pengaturanTerakhir = PengaturanKoperasi::query()
+                ->orderByDesc('berlaku_mulai')
+                ->orderByDesc('id')
+                ->lockForUpdate()
+                ->first();
+
+            if ($pengaturanTerakhir) {
+                $tanggalMulaiLama = $pengaturanTerakhir->berlaku_mulai;
+
+                // Jika pengaturan bulan ini sudah ada,
+                // perbarui baris bulan ini agar periodenya tidak tumpang tindih.
+                if (
+                    $tanggalMulaiLama &&
+                    Carbon::parse($tanggalMulaiLama)->toDateString()
+                    >= $awalBulanIni
+                ) {
+                    $pengaturanTerakhir->update($validated);
+
+                    return;
+                }
+
+                // Tutup periode lama sehari sebelum bulan baru.
+                $pengaturanTerakhir->berlaku_sampai = $akhirBulanLalu;
+                $pengaturanTerakhir->save();
+            }
+
+            // Buat riwayat pengaturan baru.
+            PengaturanKoperasi::create([
+                'simpanan_wajib' => $validated['simpanan_wajib'],
+                'bunga_pinjaman' => $validated['bunga_pinjaman'],
+                'berlaku_mulai' => $awalBulanIni,
+                'berlaku_sampai' => null,
+            ]);
+        });
+
+        return back()->with(
+            'success',
+            'Pengaturan koperasi berhasil diperbarui.'
+        );
     }
 
     private function transformLog($data)
@@ -93,28 +195,53 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
-            'office_id' => 'required|exists:offices,id',
+            'name' => ['required', 'string', 'max:255'],
+            'office_id' => ['required', 'exists:offices,id'],
+            'active_at' => ['required', 'date'],
         ]);
 
         DB::transaction(function () use ($validated) {
+            // Membuat email otomatis dari nama anggota
+            $namaEmail = \Illuminate\Support\Str::slug(
+                $validated['name'],
+                ''
+            );
+
+            $namaEmail = $namaEmail ?: 'anggota';
+
+            $domain = 'gmail.com';
+
+            // Membuat email unik
+            do {
+                $kodeAcak = strtolower(
+                    \Illuminate\Support\Str::random(3)
+                );
+
+                $email = $namaEmail . $kodeAcak . '@' . $domain;
+            } while (User::where('email', $email)->exists());
+
+            // Membuat nomor anggota otomatis
+            $nomorAnggota = $this->generateNomorAnggota();
+
             $user = User::create([
-                'name' => $validated['name'],
-                'email' => $validated['email'],
+                'nomor_anggota' => $nomorAnggota,
+                'name' => ucwords(strtolower($validated['name'])),
+                'email' => $email,
                 'office_id' => $validated['office_id'],
                 'status' => 'active',
                 'password' => Hash::make('ffuiadda'),
-                'active_at' => now(),
+                'active_at' => $validated['active_at'],
             ]);
 
             $user->assignRole('user');
+
             ActivityLog::create([
                 'by_admin' => Auth::id(),
                 'user_id' => $user->id,
                 'jenis_update' => 'Add User',
                 'old' => null,
                 'new' => json_encode([
+                    'nomor_anggota' => $user->nomor_anggota,
                     'name' => $user->name,
                     'email' => $user->email,
                     'office_id' => $user->office_id,
@@ -124,81 +251,118 @@ class UserController extends Controller
             ]);
         });
 
-        return back()->with('success', 'User berhasil ditambahkan');
+        return back()->with(
+            'success',
+            'User berhasil ditambahkan'
+        );
     }
+
+
 
     public function update(Request $request, User $user)
     {
-        $isSuperAdmin = Auth::user()->roles->contains('name', 'super-admin');
-
-        $rules = [
-            'office_id' => 'required|exists:offices,id',
-            'status' => 'required|in:active,inactive',
-        ];
-
-        if ($isSuperAdmin) {
-            $rules['role'] = 'required|exists:roles,name';
-        }
-
-        $validated = $request->validate($rules);
+        $admin = Auth::user();
+        $isSuperAdmin = $admin->roles->contains('name', 'super-admin');
 
         if ($user->hasRole('super-admin') && !$isSuperAdmin) {
             return back()->with('error', 'Tidak bisa ubah user super-admin');
         }
 
-        DB::transaction(function () use ($user, $validated, $isSuperAdmin, $request) {
-            $oldData = [
-                'office_id' => $user->office_id,
-                'status' => $user->status,
-            ];
-
-            $changes = [];
-            $jenisUpdate = [];
-
-            if ($oldData['office_id'] != $validated['office_id']) {
-                $changes['office_id'] = [
-                    'old' => $oldData['office_id'],
-                    'new' => $validated['office_id'],
-                ];
-                $jenisUpdate[] = 'office';
-            }
-
-            if ($oldData['status'] != $validated['status']) {
-                $changes['status'] = [
-                    'old' => $oldData['status'],
-                    'new' => $validated['status'],
-                ];
-                $jenisUpdate[] = 'status';
-            }
-
-            $user->update([
-                'office_id' => $validated['office_id'],
-                'status' => $validated['status'],
+        // User inactive tidak boleh diaktifkan kembali
+        if ($user->status === 'inactive' && $request->input('status') === 'active') {
+            return back()->withErrors([
+                'status' => 'User yang sudah inactive tidak dapat diaktifkan kembali.',
             ]);
+        }
 
-            if ($isSuperAdmin && $request->filled('password')) {
-                $user->update([
-                    'password' => Hash::make($request->password),
-                ]);
+        $rules = [
+            'office_id' => ['required', 'exists:offices,id'],
+            'status' => ['required', 'in:active,inactive'],
+            'tanggal_status' => ['nullable', 'date'],
+        ];
 
-                $jenisUpdate[] = 'password';
+        if ($isSuperAdmin) {
+            $rules['role'] = ['required', 'exists:roles,name'];
+            $rules['password'] = ['nullable', 'string', 'min:8'];
+        }
+
+        $validated = $request->validate($rules);
+
+        $statusBerubah = $user->status !== $validated['status'];
+
+        if ($statusBerubah) {
+            $request->validate([
+                'tanggal_status' => ['required', 'date'],
+            ]);
+        }
+
+        // Lanjutkan kode DB::transaction() Anda yang sekarang.
+    }
+
+
+
+    private function generateNomorAnggota(): string
+    {
+        // Kunci satu baris users sebagai pengunci bersama.
+        $pengunci = User::query()
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$pengunci) {
+            throw new \RuntimeException(
+                'Tidak ada baris users untuk dijadikan pengunci.'
+            );
+        }
+
+        // Cari nomor anggota dengan urutan terbesar.
+        $nomorTerakhir = User::query()
+            ->whereNotNull('nomor_anggota')
+            ->orderByRaw("
+            CAST(SUBSTRING(nomor_anggota, 6, 3) AS UNSIGNED) DESC
+        ")
+            ->get(['nomor_anggota']);
+
+        $urutanTerbesar = 0;
+
+        foreach ($nomorTerakhir as $user) {
+            if (!preg_match(
+                '/^KSPS-(\d{3})([A-Z]+)$/',
+                $user->nomor_anggota,
+                $match
+            )) {
+                continue;
             }
 
-            if (!$isSuperAdmin && !empty($changes)) {
-                ActivityLog::create([
-                    'by_admin' => Auth::id(),
-                    'user_id' => $user->id,
-                    'jenis_update' => implode(', ', $jenisUpdate),
-                    'old' => json_encode(collect($changes)->map(fn($c) => $c['old'])),
-                    'new' => json_encode(collect($changes)->map(fn($c) => $c['new'])),
-                ]);
+            $angka = (int) $match[1];
+            $huruf = $match[2];
+
+            $indeksHuruf = 0;
+
+            foreach (str_split($huruf) as $karakter) {
+                $indeksHuruf = ($indeksHuruf * 26)
+                    + ord($karakter) - ord('A') + 1;
             }
 
-            if ($isSuperAdmin && isset($validated['role'])) {
-                $user->syncRoles([$validated['role']]);
-            }
-        });
+            $urutan = (($indeksHuruf - 1) * 999) + $angka;
 
-        return back()->with('success', 'User berhasil diupdate');
+            $urutanTerbesar = max($urutanTerbesar, $urutan);
+        }
+
+        $urutanBaru = $urutanTerbesar + 1;
+
+        $angka = (($urutanBaru - 1) % 999) + 1;
+        $indeksHuruf = intdiv($urutanBaru - 1, 999);
+
+        $huruf = '';
+        $nilai = $indeksHuruf + 1;
+
+        while ($nilai > 0) {
+            $nilai--;
+            $huruf = chr(65 + ($nilai % 26)) . $huruf;
+            $nilai = intdiv($nilai, 26);
+        }
+
+        return sprintf('KSPS-%03d%s', $angka, $huruf);
     }
 }

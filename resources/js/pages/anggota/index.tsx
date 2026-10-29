@@ -30,6 +30,7 @@ interface Props {
         search?: string;
         perPage?: number;
         office_id: string;
+        statusUser: string;
     };
     offices: Option[];
 }
@@ -43,6 +44,7 @@ export default function Index({ anggota, filters, offices }: Props) {
         search: filters.search ?? '',
         perPage: filters.perPage ?? 10,
         office_id: filters.office_id ?? '',
+        statusUser: filters.statusUser ?? 'active',
     });
 
     const { handleFilterChange, handleExport } = useTableActions({
@@ -54,15 +56,30 @@ export default function Index({ anggota, filters, offices }: Props) {
 
     const handleResetFilters = () => {
         setIsRefreshing(true);
-        setLocalFilters({ search: '', perPage: 10, office_id: '' });
+        setLocalFilters({ search: '', perPage: 10, office_id: '', statusUser: 'active' });
         router.get(
             route('anggota.index'),
-            {},
+            { statusUser: 'active' },
             {
                 replace: true,
                 onFinish: () => setIsRefreshing(false),
             },
         );
+    };
+    const handleStatusUserChange = (value: string) => {
+        const updated = {
+            ...localFilters,
+            statusUser: value,
+            page: 1,
+        };
+
+        setLocalFilters(updated);
+
+        router.get(route('anggota.index'), updated, {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        });
     };
 
     return (
@@ -81,12 +98,12 @@ export default function Index({ anggota, filters, offices }: Props) {
 
                         <Button disabled variant="outline" onClick={() => handleExport(columnVisibility)}>
                             <FileSpreadsheet className="h-4 w-4" />
-                             <span className="hidden sm:inline">Export</span>
+                            <span className="hidden sm:inline">Export</span>
                         </Button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 rounded-xl border p-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 rounded-md border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-3">
                     <div>
                         <Label>Nama Anggota</Label>
                         <Input
@@ -94,6 +111,19 @@ export default function Index({ anggota, filters, offices }: Props) {
                             onChange={(e) => handleFilterChange(localFilters, setLocalFilters, 'search', e.target.value)}
                             placeholder="Cari nama anggota..."
                         />
+                    </div>
+                    <div>
+                        <Label>Status Anggota</Label>
+                        <Select value={localFilters.statusUser ?? 'active'} onValueChange={handleStatusUserChange}>
+                            <SelectTrigger className="h-7 w-full p-4">
+                                <SelectValue placeholder="Pilih Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Status</SelectItem>
+                                <SelectItem value="active">Active</SelectItem>
+                                <SelectItem value="inactive">Inactive</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div>
                         <Label>Kantor</Label>

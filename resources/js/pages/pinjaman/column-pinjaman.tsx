@@ -5,6 +5,11 @@ import { Pinjaman } from '@/types/custom/pinjaman';
 import { formatRupiah } from '@/lib/formatRupiah';
 
 export const columnPinjaman = (openEdit: any, trial: boolean): ColumnDef<Pinjaman>[] => [
+     {
+        id: 'nomor',
+        header: () => <div className="flex w-10! items-center justify-center">No.</div>,
+        cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
+    },
     {
         accessorKey: 'user.name',
         header: 'Nama',
@@ -78,7 +83,10 @@ export const columnPinjaman = (openEdit: any, trial: boolean): ColumnDef<Pinjama
             const data = row.original;
 
             return (
-                <Button onClick={() => openEdit(data)} disabled={trial} className="cursor-pointer hover:scale-105">
+                <Button onClick={() => openEdit(data)} 
+                // disabled={trial} 
+                disabled
+                className="cursor-pointer hover:scale-105">
                     <SquarePen size={16} /> Edit
                 </Button>
             );
