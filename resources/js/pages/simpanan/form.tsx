@@ -44,7 +44,7 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
         jenis: initialData?.jenis ?? 'wajib',
         jumlah: initialData?.jumlah ?? simpananWajibSetting,
         tanggal: initialData?.tanggal ?? '',
-        custom_jumlah: initialData ? true : false,
+        // custom_jumlah: initialData ? true : false,
         bukti_transfer: null as File | null,
         hapus_bukti_transfer: false,
     };
@@ -53,24 +53,11 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
     const selectedUser = users.find((u) => u.id === Number(data.user_id));
 
     const handleJenisChange = (value: string) => {
-        if (value === 'wajib') {
-            setData({
-                ...data,
-                jenis: 'wajib',
-                jumlah: data.custom_jumlah ? data.jumlah : simpananWajibSetting,
-            });
-
-            return;
-        }
-
-        if (value === 'modal') {
-            setData({
-                ...data,
-                jenis: 'modal',
-                jumlah: '',
-                custom_jumlah: false,
-            });
-        }
+        setData({
+            ...data,
+            jenis: value,
+            jumlah: value === 'wajib' ? simpananWajibSetting : '',
+        });
     };
 
     const isDataChanged = () => {
@@ -187,28 +174,6 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
                     </SelectContent>
                 </Select>
 
-                {data.jenis === 'wajib' && (
-                    <div className="flex items-center gap-2">
-                        <Checkbox
-                            id="custom_jumlah"
-                            checked={Boolean(data.custom_jumlah)}
-                            onCheckedChange={(checked) => {
-                                const custom = checked === true;
-
-                                setData({
-                                    ...data,
-                                    custom_jumlah: custom,
-                                    jumlah: custom ? data.jumlah : simpananWajibSetting,
-                                });
-                            }}
-                        />
-
-                        <Label htmlFor="custom_jumlah" className="cursor-pointer font-normal">
-                            Gunakan jumlah custom
-                        </Label>
-                    </div>
-                )}
-
                 {errors.jenis && <p className="text-xs text-red-500">{errors.jenis}</p>}
             </div>
 
@@ -218,17 +183,23 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
                 <Input
                     type="text"
                     value={formatRupiah(data.jumlah || 0)}
-                    disabled={data.jenis === 'wajib' && !data.custom_jumlah}
+                    disabled={data.jenis === 'wajib'}
                     onChange={(e) => {
                         const raw = e.target.value.replace(/[^0-9]/g, '');
 
-                        setData('jumlah', raw ? Number(raw) : 0);
+                        setData('jumlah', raw ? Number(raw) : '');
                     }}
                     className={cn('text-xs', errors.jumlah && 'border-red-500')}
                 />
 
-                {data.jenis === 'wajib' && !data.custom_jumlah && (
-                    <p className="text-xs text-muted-foreground">Nominal mengikuti pengaturan simpanan wajib koperasi.</p>
+                {data.jenis === 'wajib' && (
+                    <p className="text-xs text-muted-foreground">
+                        Nominal simpanan wajib mengikuti pengaturan simpanan wajib koperasi.
+                    </p>
+                )}
+
+                {data.jenis === 'modal' && (
+                    <p className="text-xs text-muted-foreground">Nominal simpanan modal dapat ditentukan secara manual.</p>
                 )}
 
                 {errors.jumlah && <p className="text-xs text-red-500">{errors.jumlah}</p>}

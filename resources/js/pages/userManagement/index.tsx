@@ -259,7 +259,6 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                         </div>
 
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                            {/* Bulan */}
                             <div>
                                 <Label>Bulan Aktif</Label>
                                 <Select
@@ -271,7 +270,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     </SelectTrigger>
 
                                     <SelectContent align="start">
-                                        <SelectItem value="all">ALL BULAN</SelectItem>
+                                        <SelectItem value="all">All</SelectItem>
 
                                         {daftarBulan.map((bulan) => (
                                             <SelectItem key={bulan.value} value={bulan.value}>
@@ -282,7 +281,6 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 </Select>
                             </div>
 
-                            {/* Tahun */}
                             <div>
                                 <Label>Tahun Aktif</Label>
                                 <Select
@@ -294,7 +292,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     </SelectTrigger>
 
                                     <SelectContent align="start">
-                                        <SelectItem value="all">ALL TAHUN</SelectItem>
+                                        <SelectItem value="all">All</SelectItem>
 
                                         {daftarTahun.map((tahun) => (
                                             <SelectItem key={tahun} value={tahun}>
@@ -305,7 +303,6 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 </Select>
                             </div>
 
-                            {/* Tombol */}
                             <div className="flex items-end gap-2">
                                 <Button
                                     className="flex-1"
@@ -325,7 +322,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                         )
                                     }
                                 >
-                                    Terapkan Filter
+                                    Filter
                                 </Button>
 
                                 <Button

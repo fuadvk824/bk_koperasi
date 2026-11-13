@@ -212,37 +212,32 @@ class SimpananController extends Controller
 
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'jenis' => 'required|in:wajib,sukarela,modal',
+            'jenis' => 'required|in:wajib,modal',
             'jumlah' => 'nullable|numeric|min:0',
             'tanggal' => 'required|date',
-            'custom_jumlah' => 'nullable|boolean',
             'bukti_transfer' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-        $tanggal = now()->toDateString();
+        if ($validated['jenis'] === 'wajib') {
 
-        $pengaturan = DB::table('pengaturan_koperasi')
-            ->whereDate('berlaku_mulai', '<=', $tanggal)
-            ->where(function ($query) use ($tanggal) {
-                $query->whereNull('berlaku_sampai')
-                    ->orWhereDate('berlaku_sampai', '>=', $tanggal);
-            })
-            ->orderByDesc('berlaku_mulai')
-            ->orderByDesc('id')
-            ->first();
+            $tanggal = now()->toDateString();
 
-        if (! $pengaturan || $pengaturan->simpanan_wajib <= 0) {
-            return response()->json([
-                'message' => 'Pengaturan simpanan wajib belum tersedia atau tidak berlaku.',
-            ], 422);
-        }
+            $pengaturan = DB::table('pengaturan_koperasi')
+                ->whereDate('berlaku_mulai', '<=', $tanggal)
+                ->where(function ($query) use ($tanggal) {
+                    $query->whereNull('berlaku_sampai')
+                        ->orWhereDate('berlaku_sampai', '>=', $tanggal);
+                })
+                ->orderByDesc('berlaku_mulai')
+                ->orderByDesc('id')
+                ->first();
 
-        $customJumlah = filter_var(
-            $validated['custom_jumlah'] ?? false,
-            FILTER_VALIDATE_BOOLEAN
-        );
+            if (!$pengaturan || $pengaturan->simpanan_wajib <= 0) {
+                return back()->withErrors([
+                    'jenis' => 'Pengaturan simpanan wajib belum tersedia atau tidak berlaku.',
+                ]);
+            }
 
-        if ($validated['jenis'] === 'wajib' && !$customJumlah) {
             $jumlah = $pengaturan->simpanan_wajib;
         } else {
             $jumlah = $validated['jumlah'] ?? 0;
@@ -266,6 +261,7 @@ class SimpananController extends Controller
         }
 
         DB::transaction(function () use ($validated, $jumlah, $buktiTransfer) {
+
             $simpanan = Simpanan::create([
                 'user_id' => $validated['user_id'],
                 'jenis' => $validated['jenis'],
