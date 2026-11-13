@@ -25,6 +25,7 @@ class PinjamanController extends Controller
         $perPage = $request->input('perPage', 10);
 
         $query = Pinjaman::with('user:id,name,office_id')
+        ->where('status_approval', 'disetujui')
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->whereHas('user', function ($u) use ($request) {
@@ -54,7 +55,6 @@ class PinjamanController extends Controller
         $jumlah_pinjaman = (clone $query)->sum('jumlah_pinjaman');
         $total_pinjaman = (clone $query)->sum('total_pinjaman');
         $sisa_pinjaman = (clone $query)->sum('sisa_pinjaman');
-
 
         $tanggalHariIni = Carbon::today()->toDateString();
 
@@ -178,11 +178,8 @@ class PinjamanController extends Controller
 
             for ($i = 0; $i < $lama; $i++) {
                 $tanggal = $start->copy()->addMonthsNoOverflow($i);
-
                 $jumlahBayar = $i == $lama - 1 ? $angsuranBulat + $sisa : $angsuranBulat;
-
                 $danaPinjaman = $i == $lama - 1 ? $pokokBulat + $sisaPokok : $pokokBulat;
-
                 $bungaBayar = $jumlahBayar - $danaPinjaman;
 
                 Angsuran::create([

@@ -11,4 +11,10 @@ export type Angsuran = {
     periode: string;
     tanggal_bayar: string;
     status: 'belum_bayar' | 'sudah_bayar';
+    status_approval: 'menunggu' | 'disetujui' | 'ditolak';
+    catatan_approval?: string;
+    bukti_transfer?: string;
+
+    is_last_installment: boolean;
+    has_unpaid_previous: boolean;
 };

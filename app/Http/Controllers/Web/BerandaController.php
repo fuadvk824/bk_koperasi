@@ -34,7 +34,10 @@ class BerandaController extends Controller
         $tanggalAkhir = $endOfMonth->toDateString();
 
 
-
+        /*_________________________________________________
+         |
+         | ANGGOTA
+         |_________________________________________________*/
         $anggotaAktifPadaAkhirPeriode = function ($query) use ($tanggalAkhir) {
             $query
                 ->whereNotIn('id', [1, 98])
@@ -56,9 +59,12 @@ class BerandaController extends Controller
             ->count();
 
 
-
+        /*_________________________________________________
+         |
+         | SIMPANAN
+         |_________________________________________________*/
         $rekapSimpanan = Simpanan::query()
-            // ->whereDate('tanggal', '<=', $tanggalAkhir)
+            ->where('status_approval', 'disetujui')
             ->selectRaw("
             COALESCE(SUM(CASE WHEN jenis = 'wajib'
                 THEN jumlah ELSE 0 END), 0) AS wajib,
@@ -82,9 +88,8 @@ class BerandaController extends Controller
             + $totalSimpananModal
             + $totalPenarikan;
 
-
-
         $rekapSimpananBulanIni = Simpanan::query()
+            ->where('status_approval', 'disetujui')
             ->whereBetween('tanggal', [$tanggalAwal, $tanggalAkhir])
             ->selectRaw("
             COALESCE(SUM(CASE WHEN jenis = 'wajib'
@@ -107,8 +112,6 @@ class BerandaController extends Controller
             + $simpananSukarelaBulanIni
             + $simpananModalBulanIni
             + $penarikanBulanIni;
-
-
 
         $pengaturan = PengaturanKoperasi::query()
             ->where(function ($query) use ($tanggalAwal) {
@@ -144,34 +147,33 @@ class BerandaController extends Controller
         );
 
 
-
-        $queryPinjamanPeriode = Pinjaman::query();
-        // ->whereDate('tanggal_pinjaman', '<=', $tanggalAkhir);
+        /*_________________________________________________
+         |
+         | PINJAMAN
+         |_________________________________________________*/
+        $queryPinjamanPeriode = Pinjaman::query()
+            ->where('status_approval', 'disetujui');
 
         $totalNilaiPinjaman = (float) (clone $queryPinjamanPeriode)
             ->sum('total_pinjaman');
+        $totalSisaPinjaman = (float) (clone $queryPinjamanPeriode)
+            ->sum('sisa_pinjaman');
 
         $totalPinjamanAktif = (clone $queryPinjamanPeriode)
             ->where('status', 'aktif')
             ->count();
-
         $totalPinjamanLunas = (clone $queryPinjamanPeriode)
             ->where('status', 'lunas')
             ->count();
-
         $totalPinjamanMacet = (clone $queryPinjamanPeriode)
             ->where('status', 'macet')
             ->count();
-
-        $totalSisaPinjaman = (float) (clone $queryPinjamanPeriode)
-            ->sum('sisa_pinjaman');
-
         $totalNominalPinjamanMacet = (float) (clone $queryPinjamanPeriode)
             ->where('status', 'macet')
             ->sum('sisa_pinjaman');
 
-        ///
         $queryPinjamanBulanIni = Pinjaman::query()
+            ->where('status_approval', 'disetujui')
             ->whereBetween('tanggal_pinjaman', [
                 $tanggalAwal,
                 $tanggalAkhir,
@@ -179,27 +181,23 @@ class BerandaController extends Controller
 
         $jumlahPinjamanBulanIni = (clone $queryPinjamanBulanIni)
             ->count();
-
         $totalPinjamanBulanIni = (float) (clone $queryPinjamanBulanIni)
             ->sum('total_pinjaman');
 
         $totalPokokPinjamanBulanIni = (float) (clone $queryPinjamanBulanIni)
             ->sum('jumlah_pinjaman');
-
         $keuntunganPinjamanBulanIni =  $totalPinjamanBulanIni - $totalPokokPinjamanBulanIni;
 
         $rataRataPinjamanBulanIni = $jumlahPinjamanBulanIni > 0
             ? $totalPinjamanBulanIni / $jumlahPinjamanBulanIni
             : 0;
 
-
-
-
         /*_________________________________________________
          |
          | ANGSURAN
          |_________________________________________________*/
         $jadwalAngsuranBulanIni = Angsuran::query()
+            ->where('status_approval', 'disetujui')
             ->where('bulan', $bulan)
             ->where('tahun', $tahun)
             ->get();
@@ -237,6 +235,7 @@ class BerandaController extends Controller
         );
 
         $angsuranTunggakan = Angsuran::query()
+            ->where('status_approval', 'disetujui')
             ->where(function ($query) {
                 $query->whereNull('tanggal_bayar')
                     ->orWhere('status', 'belum_bayar');
@@ -257,20 +256,10 @@ class BerandaController extends Controller
             ->count();
 
 
-
-
-        // $jumlahTunggakanCount = $angsuranBelumBayarSampaiAkhir
-        //     ->filter(function ($item) use ($tahun, $bulan) {
-        //         return ((int) $item->tahun < $tahun)
-        //             || (
-        //                 (int) $item->tahun === $tahun
-        //                 && (int) $item->bulan < $bulan
-        //             );
-        //     })
-        //     ->count();
-
-
-
+        /*_________________________________________________
+         |
+         | TRANSAKSI KAS
+         |_________________________________________________*/
         $queryKasPeriode = TransaksiKas::query()
             ->where('status', 'berhasil');
         // ->whereDate('tanggal', '<=', $tanggalAkhir);
@@ -323,91 +312,7 @@ class BerandaController extends Controller
         $kasMasukKategori = $kasPerKategori
             ->map(fn($item) => (float) $item->masuk)
             ->all();
-        //pengganti
 
-        //_______________________________________________________________
-        //bulan ini & bulan lainya_______________________________________
-        // $kasMasukKategori = TransaksiKas::query()
-        //     ->where('status', 'berhasil')
-        //     ->where('jenis', 'masuk')
-        //     ->where('kategori', '!=', 'angsuran')
-        //     ->whereBetween('tanggal', [
-        //         $startOfMonth->toDateTimeString(),
-        //         $endOfMonth->toDateTimeString(),
-        //     ])
-        //     ->selectRaw('kategori, SUM(jumlah) AS total')
-        //     ->groupBy('kategori')
-        //     ->pluck('total', 'kategori')
-        //     ->map(fn($value) => (float) $value)
-        //     ->all();
-
-        // // Total kas masuk dari angsuran yang jadwalnya
-        // // sesuai dengan bulan dan tahun filter dashboard.
-        // $angsuranBulanIni = TransaksiKas::query()
-        //     ->join('angsuran', function ($join) {
-        //         $join->on(
-        //             'transaksi_kas.ref_id',
-        //             '=',
-        //             'angsuran.id'
-        //         );
-        //     })
-        //     ->where('transaksi_kas.status', 'berhasil')
-        //     ->where('transaksi_kas.jenis', 'masuk')
-        //     ->where('transaksi_kas.kategori', 'angsuran')
-        //     ->whereBetween('transaksi_kas.tanggal', [
-        //         $startOfMonth->toDateTimeString(),
-        //         $endOfMonth->toDateTimeString(),
-        //     ])
-        //     ->where('angsuran.bulan', $bulan)
-        //     ->where('angsuran.tahun', $tahun)
-        //     ->sum('transaksi_kas.jumlah');
-
-        // // Total kas masuk dari angsuran yang jadwalnya
-        // // berbeda dengan bulan dan tahun filter dashboard.
-        // $angsuranBulanLainnya = TransaksiKas::query()
-        //     ->join('angsuran', function ($join) {
-        //         $join->on(
-        //             'transaksi_kas.ref_id',
-        //             '=',
-        //             'angsuran.id'
-        //         );
-        //     })
-        //     ->where('transaksi_kas.status', 'berhasil')
-        //     ->where('transaksi_kas.jenis', 'masuk')
-        //     ->where('transaksi_kas.kategori', 'angsuran')
-        //     ->whereBetween('transaksi_kas.tanggal', [
-        //         $startOfMonth->toDateTimeString(),
-        //         $endOfMonth->toDateTimeString(),
-        //     ])
-        //     ->where(function ($query) use ($bulan, $tahun) {
-        //         $query
-        //             ->where('angsuran.tahun', '!=', $tahun)
-        //             ->orWhere('angsuran.bulan', '!=', $bulan);
-        //     })
-        //     ->sum('transaksi_kas.jumlah');
-
-        // // Masukkan kedua rincian ke kategori kas masuk.
-        // $kasMasukKategori['angsuran_bulan_ini'] =
-        //     (float) $angsuranBulanIni;
-
-        // $kasMasukKategori['angsuran_bulan_lainnya'] =
-        //     (float) $angsuranBulanLainnya;
-        // $kasKeluarKategori = TransaksiKas::query()
-        //     ->where('status', 'berhasil')
-        //     ->where('jenis', 'keluar')
-        //     ->whereBetween('tanggal', [
-        //         $startOfMonth->toDateTimeString(),
-        //         $endOfMonth->toDateTimeString(),
-        //     ])
-        //     ->selectRaw('kategori, SUM(jumlah) AS total')
-        //     ->groupBy('kategori')
-        //     ->pluck('total', 'kategori')
-        //     ->map(fn($value) => (float) $value)
-        //     ->all();
-        //bulan ini & bulan lainya__________________________________________
-        //__________________________________________________________________
-
-        //pengganti
         $kasKeluarKategori = $kasPerKategori
             ->map(fn($item) => (float) $item->keluar)
             ->all();
@@ -420,14 +325,16 @@ class BerandaController extends Controller
                 $endOfMonth->toDateTimeString(),
             ])
             ->selectRaw("
-            DATE(tanggal) AS tanggal,
-            SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END) AS masuk,
-            SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END) AS keluar
-        ")
+                DATE(tanggal) AS tanggal,
+                SUM(CASE WHEN jenis = 'masuk' THEN jumlah ELSE 0 END) AS masuk,
+                SUM(CASE WHEN jenis = 'keluar' THEN jumlah ELSE 0 END) AS keluar
+            ")
             ->groupByRaw('DATE(tanggal)')
             ->orderByRaw('DATE(tanggal)')
             ->get()
-            ->keyBy('tanggal');
+            ->keyBy(function ($item) {
+                return Carbon::parse($item->tanggal)->toDateString();
+            });
 
         $grafikKas = [];
         $tanggalIterasi = $startOfMonth->copy();
@@ -499,7 +406,6 @@ class BerandaController extends Controller
             'total_kas_keluar' => $totalKasKeluar,
 
             'total_simpanan' => $totalSimpanan,
-
             'total_simpanan_wajib' => $totalSimpananWajib,
             'total_simpanan_sukarela' => $totalSimpananSukarela,
             'total_simpanan_modal' => $totalSimpananModal,
@@ -565,82 +471,3 @@ class BerandaController extends Controller
         ]);
     }
 }
-
-
-//  $kasMasukKategori = TransaksiKas::query()
-//             ->where('status', 'berhasil')
-//             ->where('jenis', 'masuk')
-//             ->where('kategori', '!=', 'angsuran')
-//             ->whereBetween('tanggal', [
-//                 $startOfMonth->toDateTimeString(),
-//                 $endOfMonth->toDateTimeString(),
-//             ])
-//             ->selectRaw('kategori, SUM(jumlah) AS total')
-//             ->groupBy('kategori')
-//             ->pluck('total', 'kategori')
-//             ->map(fn($value) => (float) $value)
-//             ->all();
-
-//         // Total kas masuk dari angsuran yang jadwalnya
-//         // sesuai dengan bulan dan tahun filter dashboard.
-//         $angsuranBulanIni = TransaksiKas::query()
-//             ->join('angsuran', function ($join) {
-//                 $join->on(
-//                     'transaksi_kas.ref_id',
-//                     '=',
-//                     'angsuran.id'
-//                 );
-//             })
-//             ->where('transaksi_kas.status', 'berhasil')
-//             ->where('transaksi_kas.jenis', 'masuk')
-//             ->where('transaksi_kas.kategori', 'angsuran')
-//             ->whereBetween('transaksi_kas.tanggal', [
-//                 $startOfMonth->toDateTimeString(),
-//                 $endOfMonth->toDateTimeString(),
-//             ])
-//             ->where('angsuran.bulan', $bulan)
-//             ->where('angsuran.tahun', $tahun)
-//             ->sum('transaksi_kas.jumlah');
-
-//         // Total kas masuk dari angsuran yang jadwalnya
-//         // berbeda dengan bulan dan tahun filter dashboard.
-//         $angsuranBulanLainnya = TransaksiKas::query()
-//             ->join('angsuran', function ($join) {
-//                 $join->on(
-//                     'transaksi_kas.ref_id',
-//                     '=',
-//                     'angsuran.id'
-//                 );
-//             })
-//             ->where('transaksi_kas.status', 'berhasil')
-//             ->where('transaksi_kas.jenis', 'masuk')
-//             ->where('transaksi_kas.kategori', 'angsuran')
-//             ->whereBetween('transaksi_kas.tanggal', [
-//                 $startOfMonth->toDateTimeString(),
-//                 $endOfMonth->toDateTimeString(),
-//             ])
-//             ->where(function ($query) use ($bulan, $tahun) {
-//                 $query
-//                     ->where('angsuran.tahun', '!=', $tahun)
-//                     ->orWhere('angsuran.bulan', '!=', $bulan);
-//             })
-//             ->sum('transaksi_kas.jumlah');
-
-//         // Masukkan kedua rincian ke kategori kas masuk.
-//         $kasMasukKategori['angsuran_bulan_ini'] =
-//             (float) $angsuranBulanIni;
-
-//         $kasMasukKategori['angsuran_bulan_lainnya'] =
-//             (float) $angsuranBulanLainnya;
-//         $kasKeluarKategori = TransaksiKas::query()
-//             ->where('status', 'berhasil')
-//             ->where('jenis', 'keluar')
-//             ->whereBetween('tanggal', [
-//                 $startOfMonth->toDateTimeString(),
-//                 $endOfMonth->toDateTimeString(),
-//             ])
-//             ->selectRaw('kategori, SUM(jumlah) AS total')
-//             ->groupBy('kategori')
-//             ->pluck('total', 'kategori')
-//             ->map(fn($value) => (float) $value)
-//             ->all();

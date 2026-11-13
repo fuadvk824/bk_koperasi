@@ -19,6 +19,9 @@ class SimpananResource extends JsonResource
             'jenis' => $this->jenis,
             'jumlah' => (float) $this->jumlah,
             'tanggal' => $this->tanggal->format('Y-m-d'),
+            'status_approval' => $this->status_approval,
+            'catatan_approval' => $this->catatan_approval,
+            'bukti_transfer' => $this->bukti_transfer ? asset('storage/' . $this->bukti_transfer) : null,
         ];
     }
 }

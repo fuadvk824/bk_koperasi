@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class SimpananController extends Controller
 {
@@ -20,106 +19,118 @@ class SimpananController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'jenis' => [
-                'nullable',
-                Rule::in(['wajib', 'sukarela', 'modal', 'penarikan']),
-            ],
-            'dari' => ['nullable', 'date'],
-            'sampai' => ['nullable', 'date', 'after_or_equal:dari'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
-
-        $query = DB::table('simpanan')
-            ->where('user_id', $user->id);
-
-        if (! empty($validated['jenis'])) {
-            $query->where('jenis', $validated['jenis']);
-        }
-
-        if (! empty($validated['dari'])) {
-            $query->whereDate('tanggal', '>=', $validated['dari']);
-        }
-
-        if (! empty($validated['sampai'])) {
-            $query->whereDate('tanggal', '<=', $validated['sampai']);
-        }
-
-        $data = (clone $query)
-            ->orderByDesc('tanggal')
-            ->orderByDesc('id')
-            ->paginate($validated['per_page'] ?? 15);
-
         $ringkasan = DB::table('simpanan')
             ->where('user_id', $user->id)
-            ->where('status', 'disetujui')
+            ->where('status_approval', 'disetujui')
             ->selectRaw("
-                COALESCE(SUM(
-                    CASE WHEN jenis = 'wajib' THEN jumlah ELSE 0 END
-                ), 0) as simpanan_wajib,
-                COALESCE(SUM(
-                    CASE WHEN jenis = 'sukarela' THEN jumlah ELSE 0 END
-                ), 0) as simpanan_sukarela,
-                COALESCE(SUM(
-                    CASE WHEN jenis = 'modal' THEN jumlah ELSE 0 END
-                ), 0) as simpanan_modal
-            ")
+            COALESCE(SUM(
+                CASE WHEN jenis = 'wajib' THEN jumlah ELSE 0 END
+            ), 0) as simpanan_wajib,
+
+            COALESCE(SUM(
+                CASE WHEN jenis = 'sukarela' THEN jumlah ELSE 0 END
+            ), 0) as simpanan_sukarela,
+
+            COALESCE(SUM(
+                CASE WHEN jenis = 'modal' THEN jumlah ELSE 0 END
+            ), 0) as simpanan_modal
+        ")
             ->first();
+
+        $simpananWajib = (float) $ringkasan->simpanan_wajib;
+        $simpananSukarela = (float) $ringkasan->simpanan_sukarela;
+        $simpananModal = (float) $ringkasan->simpanan_modal;
+
+        // $data = DB::table('simpanan')
+        //     ->where('user_id', $user->id)
+        //     ->select([
+        //         'id',
+        //         'jenis',
+        //         'jumlah',
+        //         'tanggal',
+        //         'status_approval',
+        //     ])
+        //     ->orderByDesc('tanggal')
+        //     ->orderByDesc('id')
+        //     ->get()
+        //     ->map(function ($item) {
+        //         return [
+        //             'id' => $item->id,
+        //             'jenis' => $item->jenis,
+        //             'jumlah' => (float) $item->jumlah,
+        //             'tanggal' => $item->tanggal,
+        //             'status_approval' => $item->status_approval,
+        //         ];
+        //     });
+        $data = DB::table('simpanan')
+            ->where('user_id', $user->id)
+            ->select([
+                'id',
+                'jenis',
+                'jumlah',
+                'tanggal',
+                'status_approval',
+            ])
+            ->orderByDesc('tanggal')
+            ->orderByDesc('id')
+            ->limit(6)
+            ->get();
+
+        $riwayatHasMore = $data->count() > 5;
+
+        $data = $data->take(5)->map(function ($item) {
+            return [
+                'id' => $item->id,
+                'jenis' => $item->jenis,
+                'jumlah' => (float) $item->jumlah,
+                'tanggal' => $item->tanggal,
+                'status_approval' => $item->status_approval,
+            ];
+        });
 
         return response()->json([
             'ringkasan' => [
-                'simpanan_wajib' => (float) $ringkasan->simpanan_wajib,
-                'simpanan_sukarela' => (float) $ringkasan->simpanan_sukarela,
-                'simpanan_modal' => (float) $ringkasan->simpanan_modal,
-                'total_simpanan' => (float) (
-                    $ringkasan->simpanan_wajib
-                    + $ringkasan->simpanan_sukarela
-                    + $ringkasan->simpanan_modal
-                ),
+                'simpanan_wajib' => $simpananWajib,
+                'simpanan_sukarela' => $simpananSukarela,
+                'simpanan_modal' => $simpananModal,
+                'total_simpanan' => $simpananWajib
+                    + $simpananSukarela
+                    + $simpananModal,
             ],
-            'data' => $data->getCollection()->map(function ($item) {
-                return [
-                    'id' => $item->id,
-                    'jenis' => $item->jenis,
-                    'jumlah' => (float) $item->jumlah,
-                    'tanggal' => $item->tanggal,
-                    'status' => $item->status,
-                    'catatan' => $item->catatan,
-                    'bukti_transfer' => $item->bukti_transfer,
-                    'created_at' => $item->created_at,
-                ];
-            })->values(),
-            'pagination' => [
-                'current_page' => $data->currentPage(),
-                'last_page' => $data->lastPage(),
-                'per_page' => $data->perPage(),
-                'total' => $data->total(),
-            ],
+            'data' => $data,
+            'riwayat_has_more' => $riwayatHasMore,
+
         ]);
     }
 
-    public function show(Request $request, int $id)
+    public function riwayat(Request $request)
     {
-        $simpanan = DB::table('simpanan')
-            ->where('id', $id)
-            ->where('user_id', $request->user()->id)
-            ->first();
+        $user = $request->user();
 
-        if (! $simpanan) {
-            return response()->json([
-                'message' => 'Data simpanan tidak ditemukan.',
-            ], 404);
-        }
+        $transaksi = DB::table('simpanan')
+            ->where('user_id', $user->id)
+            ->select([
+                'id',
+                'jenis',
+                'jumlah',
+                'tanggal',
+                'status_approval',
+            ])
+            ->orderByDesc('tanggal')
+            ->orderByDesc('id')
+            ->paginate(5);
 
-        return response()->json([
-            'data' => [
-                'id' => $simpanan->id,
-                'jenis' => $simpanan->jenis,
-                'jumlah' => (float) $simpanan->jumlah,
-                'tanggal' => $simpanan->tanggal,
-                'created_at' => $simpanan->created_at,
-            ],
-        ]);
+        $transaksi->through(function ($item) {
+            return [
+                'id' => $item->id,
+                'jenis' => $item->jenis,
+                'jumlah' => (float) $item->jumlah,
+                'tanggal' => $item->tanggal,
+                'status_approval' => $item->status_approval,
+            ];
+        });
+
+        return response()->json($transaksi);
     }
 
     public function store(Request $request)
@@ -166,9 +177,6 @@ class SimpananController extends Controller
 
         $jumlah = (float) $pengaturan->simpanan_wajib;
 
-        // Gunakan helper upload dari project absensi.
-        // Sesuaikan nama service dengan implementasi project kamu.
-
         $path = $this->imageService->upload(
             $validated['bukti_transfer'],
             'bukti_simpanan_',
@@ -188,9 +196,9 @@ class SimpananController extends Controller
                     'jenis' => 'wajib',
                     'jumlah' => $jumlah,
                     'tanggal' => $tanggal,
-                    'status' => 'menunggu',
+                    'status_approval' => 'menunggu',
                     'bukti_transfer' => $path,
-                  
+
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
@@ -200,7 +208,6 @@ class SimpananController extends Controller
                     ->first();
             });
         } catch (\Throwable $e) {
-            // Jangan meninggalkan file yatim jika penyimpanan database gagal.
             \Illuminate\Support\Facades\Storage::disk('public')->delete($path);
 
             throw $e;
@@ -213,10 +220,11 @@ class SimpananController extends Controller
                 'jenis' => $simpanan->jenis,
                 'jumlah' => (float) $simpanan->jumlah,
                 'tanggal' => $simpanan->tanggal,
-                'status' => $simpanan->status,
+                'status_approval' => $simpanan->status_approval,
                 'bukti_transfer' => $simpanan->bukti_transfer,
                 'created_at' => $simpanan->created_at,
             ],
         ], 201);
     }
 }
+    

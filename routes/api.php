@@ -6,28 +6,33 @@ use App\Http\Controllers\Api\BerandaController;
 use App\Http\Controllers\Api\SimpananController;
 use App\Http\Controllers\Api\PinjamanController;
 use App\Http\Controllers\Api\AngsuranController;
+use App\Http\Controllers\Api\AppVersionController;
 
 // Endpoint publik
+Route::get('/app-version', [AppVersionController::class, 'latest']);
 Route::post('/login', [AuthController::class, 'login']);
 
 // Endpoint yang wajib memakai token Sanctum
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin|super-admin|user'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::get('/beranda', [BerandaController::class, 'index']);
+    Route::get('/aktivitas', [BerandaController::class, 'aktivitas']);
 
     Route::get('/simpanan', [SimpananController::class, 'index']);
+    Route::get('/simpanan/riwayat', [SimpananController::class, 'riwayat',]);
     Route::get('/simpanan/{id}', [SimpananController::class, 'show']);
-    Route::post('/simpanan/pengajuan', [
-        SimpananController::class,
-        'store',
-    ]);
+    Route::post('/simpanan/pengajuan', [SimpananController::class, 'store',]);
 
     Route::get('/pinjaman', [PinjamanController::class, 'index']);
     Route::get('/pengaturan/bunga-pinjaman', [PinjamanController::class, 'bungaPinjaman']);
     Route::post('/pinjaman/pengajuan', [PinjamanController::class, 'store']);
+    Route::delete('/pinjaman/{id}', [PinjamanController::class, 'destroy']);
 
     Route::get('/angsuran', [AngsuranController::class, 'index']);
     Route::get('/angsuran/{id}', [AngsuranController::class, 'show']);
+    Route::post('/angsuran/bayar/{angsuranId}', [AngsuranController::class, 'store']);
+
+    Route::post('/angsuran/bayar/{angsuranId}', [AngsuranController::class, 'store',]);
 });

@@ -25,6 +25,9 @@ class Angsuran extends Model
         'tahun',
         'tanggal_bayar',
         'status',
+        'status_approval',
+        'catatan_approval',
+        'bukti_transfer',
     ];
 
     protected $casts = [

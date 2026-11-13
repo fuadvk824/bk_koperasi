@@ -3,147 +3,67 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\ImageUploadService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class AngsuranController extends Controller
 {
+    protected ImageUploadService $imageService;
+    public function __construct(ImageUploadService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+
     public function index(Request $request)
     {
-        $validated = $request->validate([
-            'status' => [
-                'nullable',
-                Rule::in(['belum_bayar', 'sudah_bayar']),
-            ],
-            'pinjaman_id' => [
-                'nullable',
-                'integer',
-            ],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
+        $userId = $request->user()->id;
 
-        $query = DB::table('angsuran')
-            ->join('pinjaman', 'pinjaman.id', '=', 'angsuran.pinjaman_id')
-            ->where('angsuran.user_id', $request->user()->id)
-            ->where('pinjaman.user_id', $request->user()->id)
+        $data = DB::table('angsuran as a')
+            ->join('pinjaman as p', 'p.id', '=', 'a.pinjaman_id')
+            ->where('a.user_id', $userId)
+            ->where('p.user_id', $userId)
+            ->where('p.status', 'aktif')
+            ->where('p.status_approval', 'disetujui')
             ->select([
-                'angsuran.id',
-                'angsuran.pinjaman_id',
-                'angsuran.angsuran_ke',
-                'angsuran.dana_pinjaman',
-                'angsuran.jumlah_bayar',
-                'angsuran.bunga_bayar',
-                'angsuran.real_bayar',
-                'angsuran.bulan',
-                'angsuran.tahun',
-                'angsuran.tanggal_bayar',
-                'angsuran.status',
-                'pinjaman.id as id_pinjaman',
-                'pinjaman.lama_angsuran',
-                'pinjaman.total_pinjaman',
-                'pinjaman.sisa_pinjaman',
-                'pinjaman.status as status_pinjaman',
-            ]);
+                'a.id',
+                'a.user_id',
+                'a.pinjaman_id',
+                'a.angsuran_ke',
+                'a.dana_pinjaman',
+                'a.jumlah_bayar',
+                'a.bunga_bayar',
+                'a.real_bayar',
+                'a.bulan',
+                'a.tahun',
+                'a.status',
+                'a.status_approval',
+                'a.tanggal_bayar',
+                'p.lama_angsuran',
+                'p.jumlah_pinjaman',
+                'p.status as status_pinjaman',
+            ])
+            ->orderBy('a.tahun')
+            ->orderBy('a.bulan')
+            ->orderBy('a.angsuran_ke')
+            ->get()
+            ->map(function ($item) {
+                $item->tanggal_jatuh_tempo = Carbon::create(
+                    (int) $item->tahun,
+                    (int) $item->bulan,
+                    1
+                )->endOfMonth()->toDateString();
 
-        if (! empty($validated['status'])) {
-            $query->where('angsuran.status', $validated['status']);
-        }
+                $item->nomor_pinjaman = (string) $item->pinjaman_id;
 
-        if (! empty($validated['pinjaman_id'])) {
-            $query->where('angsuran.pinjaman_id', $validated['pinjaman_id']);
-        }
-
-        $data = $query
-            ->orderBy('angsuran.tahun')
-            ->orderBy('angsuran.bulan')
-            ->orderBy('angsuran.angsuran_ke')
-            ->paginate($validated['per_page'] ?? 15);
-
-        $ringkasanQuery = DB::table('angsuran')
-            ->where('user_id', $request->user()->id);
-
-        if (! empty($validated['pinjaman_id'])) {
-            $ringkasanQuery->where(
-                'pinjaman_id',
-                $validated['pinjaman_id']
-            );
-        }
-
-        $ringkasan = (clone $ringkasanQuery)
-            ->selectRaw("
-                COUNT(*) as total_angsuran,
-                SUM(CASE WHEN status = 'sudah_bayar' THEN 1 ELSE 0 END) as sudah_bayar,
-                SUM(CASE WHEN status = 'belum_bayar' THEN 1 ELSE 0 END) as belum_bayar
-            ")
-            ->first();
+                return $item;
+            });
 
         return response()->json([
-            'ringkasan' => [
-                'total_angsuran' => (int) $ringkasan->total_angsuran,
-                'sudah_bayar' => (int) $ringkasan->sudah_bayar,
-                'belum_bayar' => (int) $ringkasan->belum_bayar,
-            ],
-            'data' => $data->getCollection()->map(function ($item) {
-                // return [
-                //     'id' => $item->id,
-                //     'pinjaman_id' => $item->pinjaman_id,
-                //     'angsuran_ke' => $item->angsuran_ke,
-                //     'dana_pinjaman' => (float) $item->dana_pinjaman,
-                //     'jumlah_bayar' => (float) $item->jumlah_bayar,
-                //     'bunga_bayar' => (float) $item->bunga_bayar,
-                //     'real_bayar' => $item->real_bayar === null
-                //         ? null
-                //         : (float) $item->real_bayar,
-                //     'bulan' => $item->bulan,
-                //     'tahun' => $item->tahun,
-                //     'tanggal_bayar' => $item->tanggal_bayar,
-                //     'status' => $item->status,
-                //     'total_pinjaman' => (float) $item->total_pinjaman,
-                //     'sisa_pinjaman' => (float) $item->sisa_pinjaman,
-                //     'status_pinjaman' => $item->status_pinjaman,
-                // ];
-                return [
-                    'id' => $item->id,
-
-                    'nomor_pinjaman' => (string) $item->id_pinjaman,
-
-                    'pinjaman_id' => $item->pinjaman_id,
-                    'angsuran_ke' => $item->angsuran_ke,
-                    'total_angsuran' => (int) $item->lama_angsuran,
-
-                    'dana_pinjaman' => (float) $item->dana_pinjaman,
-                    'jumlah_bayar' => (float) $item->jumlah_bayar,
-                    'bunga_bayar' => (float) $item->bunga_bayar,
-                    'real_bayar' => $item->real_bayar === null
-                        ? null
-                        : (float) $item->real_bayar,
-
-                    'bulan' => (int) $item->bulan,
-                    'tahun' => (int) $item->tahun,
-
-                    // Asumsi tanggal jatuh tempo adalah tanggal 1
-                    // pada bulan dan tahun periode angsuran.
-                    'tanggal_jatuh_tempo' => sprintf(
-                        '%04d-%02d-01',
-                        $item->tahun,
-                        $item->bulan
-                    ),
-
-                    'tanggal_bayar' => $item->tanggal_bayar,
-                    'status' => $item->status,
-
-                    'total_pinjaman' => (float) $item->total_pinjaman,
-                    'sisa_pinjaman' => (float) $item->sisa_pinjaman,
-                    'status_pinjaman' => $item->status_pinjaman,
-                ];
-            })->values(),
-            'pagination' => [
-                'current_page' => $data->currentPage(),
-                'last_page' => $data->lastPage(),
-                'per_page' => $data->perPage(),
-                'total' => $data->total(),
-            ],
+            'message' => 'Data angsuran berhasil diambil.',
+            'data' => $data,
         ]);
     }
 
@@ -156,6 +76,9 @@ class AngsuranController extends Controller
             ->where('pinjaman.user_id', $request->user()->id)
             ->select([
                 'angsuran.*',
+                // 'angsuran.status',
+                // 'angsuran.status_approval',
+                // 'angsuran.catatan_approval',
                 'pinjaman.total_pinjaman',
                 'pinjaman.sisa_pinjaman',
                 'pinjaman.status as status_pinjaman',
@@ -186,7 +109,131 @@ class AngsuranController extends Controller
                 'total_pinjaman' => (float) $item->total_pinjaman,
                 'sisa_pinjaman' => (float) $item->sisa_pinjaman,
                 'status_pinjaman' => $item->status_pinjaman,
+
             ],
         ]);
+    }
+
+    public function store(Request $request, int $angsuranId)
+    {
+        $user = $request->user();
+        $userId = $user->id;
+
+        // Validasi bukti transfer
+        $validated = $request->validate([
+            'bukti_transfer' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+        ], [
+            'bukti_transfer.required' => 'Bukti transfer wajib diunggah.',
+            'bukti_transfer.image' => 'File harus berupa gambar.',
+            'bukti_transfer.mimes' => 'Format bukti transfer harus JPG, JPEG, PNG, atau WebP.',
+            'bukti_transfer.max' => 'Ukuran gambar maksimal 5 MB.',
+        ]);
+
+        $path = null;
+
+        try {
+            $angsuran = DB::transaction(function () use (
+                $userId,
+                $angsuranId,
+                $validated,
+                &$path
+            ) {
+                // Cari angsuran milik user dan kunci selama transaksi
+                $angsuran = DB::table('angsuran')
+                    ->where('id', $angsuranId)
+                    ->where('user_id', $userId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $angsuran) {
+                    abort(404, 'Data angsuran tidak ditemukan.');
+                }
+
+                if ($angsuran->status === 'sudah_bayar') {
+                    abort(422, 'Angsuran ini sudah dibayar.');
+                }
+
+                if ($angsuran->status_approval === 'menunggu') {
+                    abort(
+                        422,
+                        'Pengajuan pembayaran angsuran masih menunggu persetujuan admin.'
+                    );
+                }
+
+                if ($angsuran->status_approval === 'disetujui') {
+                    abort(
+                        422,
+                        'Pengajuan angsuran ini sudah disetujui.'
+                    );
+                }
+
+                // Periksa pinjaman terkait
+                $pinjaman = DB::table('pinjaman')
+                    ->where('id', $angsuran->pinjaman_id)
+                    ->where('user_id', $userId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $pinjaman) {
+                    abort(404, 'Data pinjaman tidak ditemukan.');
+                }
+
+                if (
+                    $pinjaman->status !== 'aktif' ||
+                    $pinjaman->status_approval !== 'disetujui'
+                ) {
+                    abort(
+                        422,
+                        'Pinjaman belum disetujui atau sudah tidak aktif.'
+                    );
+                }
+
+                // Upload bukti transfer
+                $path = $this->imageService->upload(
+                    $validated['bukti_transfer'],
+                    'bukti_angsuran_',
+                    (string) $userId,
+                    'angsuran/bukti-transfer'
+                );
+
+                // Simpan path bukti transfer dan status pengajuan
+                DB::table('angsuran')
+                    ->where('id', $angsuranId)
+                    ->update([
+                        'status_approval' => 'menunggu',
+                        'bukti_transfer' => $path,
+                        'updated_at' => now(),
+                    ]);
+
+                return DB::table('angsuran')
+                    ->where('id', $angsuranId)
+                    ->first();
+            });
+        } catch (\Throwable $e) {
+            // Hapus file jika transaksi database gagal
+            if ($path) {
+                Storage::disk('public')->delete($path);
+            }
+
+            throw $e;
+        }
+
+        return response()->json([
+            'message' => 'Pengajuan pembayaran angsuran berhasil dikirim dan menunggu persetujuan admin.',
+            'data' => [
+                'id' => $angsuran->id,
+                'pinjaman_id' => $angsuran->pinjaman_id,
+                'jumlah_bayar' => (float) $angsuran->jumlah_bayar,
+                'status' => $angsuran->status,
+                'status_approval' => $angsuran->status_approval,
+                'bukti_transfer' => $angsuran->bukti_transfer,
+                'updated_at' => $angsuran->updated_at,
+            ],
+        ], 201);
     }
 }

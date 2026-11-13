@@ -114,7 +114,7 @@ export default function Index({ transaksiKas, filters, offices, saldoKas, kasMas
 
             <div className="space-y-4 p-5">
                 <div className="flex justify-between">
-                    <h1 className="text-xl font-semibold">Data Transaksi Kas - 13/09/26</h1>
+                    <h1 className="text-xl font-semibold">Data Transaksi Kas</h1>
 
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={handleResetFilters} className="cursor-pointer">

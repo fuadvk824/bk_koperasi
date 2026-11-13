@@ -9,6 +9,7 @@ use App\Models\PengaturanKoperasi;
 use App\Models\Simpanan;
 use App\Models\User;
 use App\Models\TransaksiKas;
+use App\Services\ImageUploadService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,12 +18,19 @@ use Illuminate\Support\Facades\DB;
 
 class SimpananController extends Controller
 {
+    protected ImageUploadService $imageService;
+    public function __construct(ImageUploadService $imageService)
+    {
+        $this->imageService = $imageService;
+    }
+
     public function index(Request $request)
     {
         $statusUser = $request->input('statusUser', 'active');
         $perPage = $request->input('perPage', 10);
 
         $query = Simpanan::with('user:id,name,office_id')
+            ->where('status_approval', 'disetujui')
             ->when($request->search, function ($q) use ($request) {
                 $q->where(function ($sub) use ($request) {
                     $sub->whereHas('user', function ($u) use ($request) {
@@ -53,6 +61,11 @@ class SimpananController extends Controller
         $simpananSukarela = (clone $query)->where('jenis', 'sukarela')->sum('jumlah');
         $simpananModal = (clone $query)->where('jenis', 'modal')->sum('jumlah');
         $totalSimpanan = $simpananWajib + $simpananSukarela + $simpananModal;
+
+        /* ______________________________________________________________
+        |
+        |  Pengaturan Koperasi
+        |  ______________________________________________________________ */
 
         $tanggalPeriode = Carbon::parse(
             $request->start_date ?? now()->startOfMonth()->toDateString()
@@ -96,7 +109,6 @@ class SimpananController extends Controller
                     ->orWhereDate('inactive_at', '>', $tanggalAkhir);
             })
             ->when($statusUser !== 'all', function ($query) use ($statusUser) {
-                // Filter status database jika memang diperlukan
                 $query->where('status', $statusUser);
             })
             ->when($request->filled('office_id'), function ($query) use ($request) {
@@ -107,11 +119,12 @@ class SimpananController extends Controller
             })
             ->orderBy('name')
             ->get();
-        // Total anggota yang wajib membayar pada periode terpilih
+
         $totalAnggotaWajibBayar = $anggota->count();
 
         $pembayaranWajib = Simpanan::query()
             ->where('jenis', 'wajib')
+            ->where('status_approval', 'disetujui')
             ->whereBetween('tanggal', [
                 $tanggalAwal->toDateString(),
                 $tanggalAkhir->toDateString(),
@@ -119,6 +132,7 @@ class SimpananController extends Controller
             ->selectRaw('user_id, SUM(jumlah) as total_dibayar')
             ->groupBy('user_id')
             ->pluck('total_dibayar', 'user_id');
+
         $penarikanSimpanan = Simpanan::query()
             ->where('jenis', 'penarikan')
             ->whereBetween('tanggal', [
@@ -198,18 +212,29 @@ class SimpananController extends Controller
 
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
-            'jenis' => 'required|in:wajib, sukarela, modal',
+            'jenis' => 'required|in:wajib,sukarela,modal',
             'jumlah' => 'nullable|numeric|min:0',
             'tanggal' => 'required|date',
             'custom_jumlah' => 'nullable|boolean',
+            'bukti_transfer' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
-        $pengaturan = PengaturanKoperasi::first();
+        $tanggal = now()->toDateString();
 
-        if (!$pengaturan) {
-            return back()->withErrors([
-                'jumlah' => 'Pengaturan koperasi belum tersedia.',
-            ]);
+        $pengaturan = DB::table('pengaturan_koperasi')
+            ->whereDate('berlaku_mulai', '<=', $tanggal)
+            ->where(function ($query) use ($tanggal) {
+                $query->whereNull('berlaku_sampai')
+                    ->orWhereDate('berlaku_sampai', '>=', $tanggal);
+            })
+            ->orderByDesc('berlaku_mulai')
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $pengaturan || $pengaturan->simpanan_wajib <= 0) {
+            return response()->json([
+                'message' => 'Pengaturan simpanan wajib belum tersedia atau tidak berlaku.',
+            ], 422);
         }
 
         $customJumlah = filter_var(
@@ -229,12 +254,24 @@ class SimpananController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($validated, $jumlah) {
+        $buktiTransfer = null;
+
+        if ($request->hasFile('bukti_transfer')) {
+            $buktiTransfer = $this->imageService->upload(
+                $request->file('bukti_transfer'),
+                'bukti_transfer',
+                (string) $validated['user_id'],
+                'simpanan'
+            );
+        }
+
+        DB::transaction(function () use ($validated, $jumlah, $buktiTransfer) {
             $simpanan = Simpanan::create([
                 'user_id' => $validated['user_id'],
                 'jenis' => $validated['jenis'],
                 'jumlah' => $jumlah,
                 'tanggal' => $validated['tanggal'],
+                'bukti_transfer' => $buktiTransfer,
             ]);
 
             TransaksiKas::create([

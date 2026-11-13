@@ -1,52 +1,78 @@
-import type { ColumnDef } from '@tanstack/react-table';
-import { SquarePen } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ColumnDef } from '@tanstack/react-table';
 
-import { Simpanan } from '@/types/custom/simpanan';
+import { Badge } from '@/components/ui/badge';
+
 import { formatRupiah } from '@/lib/formatRupiah';
+import { Simpanan } from '@/types/custom/simpanan';
 
-export const columnSimpanan = (openEdit: any, trial: boolean): ColumnDef<Simpanan>[] => [
+
+export const columnSimpanan: ColumnDef<Simpanan>[] = [
     {
         id: 'nomor',
         header: () => <div className="flex w-10! items-center justify-center">No.</div>,
         cell: ({ row }) => <div className="w-10! text-center">{row.index + 1}.</div>,
     },
-
-    {
-        accessorKey: 'tanggal',
-        header: 'Tanggal',
-    },
     {
         accessorKey: 'nama_user',
-        header: 'Nama',
+        header: 'Nama Anggota',
+        cell: ({ row }) => (
+            <span className="font-medium">
+                {row.original.nama_user}
+            </span>
+        ),
     },
+    
     {
         accessorKey: 'jenis',
-        header: 'Jenis',
+        header: 'Jenis Simpanan',
+        cell: ({ row }) => (
+            <span className="capitalize">
+                {row.original.jenis}
+            </span>
+        ),
     },
     {
         accessorKey: 'jumlah',
         header: 'Jumlah',
-        cell: ({ row }) => {
-            return formatRupiah(row.original.jumlah);
-        },
+        cell: ({ row }) => (
+            <span className="font-medium">
+                {formatRupiah(row.original.jumlah)}
+            </span>
+        ),
     },
     {
-        id: 'actions',
-        header: 'Actions',
+        accessorKey: 'tanggal',
+        header: 'Tanggal',
+        cell: ({ row }) =>  row.original.tanggal,
+    },
+    {
+        accessorKey: 'status_approval',
+        header: 'Status',
         cell: ({ row }) => {
-            const data = row.original;
+            const status_approval = row.original.status_approval;
+
+            if (status_approval === 'disetujui') {
+                return (
+                    <Badge className="bg-green-600 text-white hover:bg-green-600">
+                        Disetujui
+                    </Badge>
+                );
+            }
+
+            if (status_approval === 'ditolak') {
+                return (
+                    <Badge variant="destructive">
+                        Ditolak
+                    </Badge>
+                );
+            }
 
             return (
-                <Button
-                    onClick={() => openEdit(data)}
-                    // disabled={trial}
-                    disabled
-                    className="cursor-pointer hover:scale-105"
-                >
-                    <SquarePen size={16} /> Edit
-                </Button>
+                <Badge variant="secondary">
+                    Menunggu
+                </Badge>
             );
         },
     },
+    
 ];

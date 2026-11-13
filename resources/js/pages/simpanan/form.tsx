@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,7 @@ import { formatRupiah } from '@/lib/formatRupiah';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check, ChevronsUpDown, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import { format } from 'date-fns';
@@ -33,16 +33,24 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
     const route = useRoute();
     const isEdit = !!initialData;
 
+    const [previewBukti, setPreviewBukti] = useState<string | null>(initialData?.bukti_transfer ?? null);
+    const [fileBukti, setFileBukti] = useState<File | null>(null);
+    const buktiInputRef = useRef<HTMLInputElement>(null);
+
+    const [errors, setErrors] = useState<any>({});
+
     const initialState = {
         user_id: initialData?.user_id?.toString() ?? '',
         jenis: initialData?.jenis ?? 'wajib',
-        // jumlah: initialData?.jumlah ?? '',
         jumlah: initialData?.jumlah ?? simpananWajibSetting,
         tanggal: initialData?.tanggal ?? '',
         custom_jumlah: initialData ? true : false,
+        bukti_transfer: null as File | null,
+        hapus_bukti_transfer: false,
     };
 
     const { data, setData, post, put, processing, reset } = useForm(initialState);
+    const selectedUser = users.find((u) => u.id === Number(data.user_id));
 
     const handleJenisChange = (value: string) => {
         if (value === 'wajib') {
@@ -64,9 +72,6 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
             });
         }
     };
-
-    const [errors, setErrors] = useState<any>({});
-    const selectedUser = users.find((u) => u.id === Number(data.user_id));
 
     const isDataChanged = () => {
         return (
@@ -91,7 +96,6 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!validate()) {
             toast.error('Mohon lengkapi semua data');
             return;
@@ -103,19 +107,24 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
         }
 
         const options = {
+            forceFormData: true,
+
             onSuccess: (page: any) => {
                 const flash = page.props.flash;
+
                 if (flash?.success) toast.success(flash.success);
+
                 reset();
                 close();
             },
+
             onError: (errs: any) => {
                 setErrors(errs);
                 toast.error('Terjadi kesalahan pada form');
             },
         };
 
-        isEdit ? put(route('simpanan.update', initialData.id), options) : post(route('simpanan.store'), options);
+        isEdit ? post(route('simpanan.update', initialData.id), options) : post(route('simpanan.store'), options);
     };
 
     return (
@@ -223,6 +232,65 @@ export default function Form({ close, initialData, users, simpananWajibSetting }
                 )}
 
                 {errors.jumlah && <p className="text-xs text-red-500">{errors.jumlah}</p>}
+            </div>
+
+            <div className="space-y-2">
+                <Label>Bukti Transfer (Opsional)</Label>
+
+                <div className="space-y-3 rounded-lg border border-dashed p-4">
+                    <Input
+                        ref={buktiInputRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/webp"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0] ?? null;
+
+                            setFileBukti(file);
+                            setData('bukti_transfer', file);
+
+                            if (file) {
+                                setPreviewBukti(URL.createObjectURL(file));
+                            }
+                        }}
+                    />
+
+                    <p className="text-xs text-muted-foreground">Format JPG, JPEG, PNG, WEBP. Maksimal 2 MB.</p>
+
+                    {previewBukti && (
+                        <div className="relative w-fit">
+                            <img
+                                src={previewBukti}
+                                alt="Preview bukti transfer"
+                                className="h-40 w-auto max-w-full rounded-md border object-contain"
+                            />
+
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="absolute -top-2 -right-2 h-7 w-7"
+                                onClick={() => {
+                                    setFileBukti(null);
+                                    setData({
+                                        ...data,
+                                        bukti_transfer: null,
+                                        hapus_bukti_transfer: true,
+                                    });
+
+                                    setPreviewBukti(null);
+
+                                    if (buktiInputRef.current) {
+                                        buktiInputRef.current.value = '';
+                                    }
+                                }}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    )}
+                </div>
+
+                {errors.bukti_transfer && <p className="text-xs text-red-500">{errors.bukti_transfer}</p>}
             </div>
 
             <div className="space-y-2">

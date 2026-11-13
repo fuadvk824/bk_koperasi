@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     Wallet,
     Users,
@@ -17,11 +17,13 @@ import {
     Landmark,
     ChevronDown,
     Info,
+    UserPlus,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import AppLayout from '@/layouts/app-layout';
 import { useRoute } from '@/lib/route';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DashboardProps {
     periode: {
@@ -167,9 +169,9 @@ interface StatCardProps {
     icon: React.ReactNode;
     trend?: 'up' | 'down' | 'neutral';
     trendText?: string;
+    action?: React.ReactNode;
 }
-
-const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, trend = 'neutral', trendText }) => {
+const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, trend = 'neutral', trendText, action }) => {
     return (
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-start justify-between gap-4">
@@ -178,7 +180,13 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, tr
 
                     <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">{value}</p>
 
-                    {description && <p className="mt-1 text-xs text-gray-500">{description}</p>}
+                    {(description || action) && (
+                        <div className="mt-1 flex w-full items-center justify-between gap-2">
+                            {description && <p className="text-xs leading-5 text-gray-500">{description}</p>}
+
+                            {action && <div className="flex shrink-0 items-center leading-5">{action}</div>}
+                        </div>
+                    )}
 
                     {trendText && (
                         <div
@@ -187,9 +195,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, tr
                             }`}
                         >
                             {trend === 'up' && <ArrowUpRight className="h-3.5 w-3.5" />}
-
                             {trend === 'down' && <ArrowDownRight className="h-3.5 w-3.5" />}
-
                             {trendText}
                         </div>
                     )}
@@ -309,8 +315,7 @@ const Index: React.FC<DashboardProps> = ({
     transaksi_terbaru,
 }) => {
     const route = useRoute();
-    const { auth } = usePage().props as any;
-    const isSuperAdmin = auth?.roles?.some((r: string) => r === 'super-admin');
+
     const [isInfoModalOpen, setIsInfoModalOpen] = React.useState(true);
 
     const dataSimpanan = [
@@ -336,16 +341,16 @@ const Index: React.FC<DashboardProps> = ({
 
             {isInfoModalOpen && (
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+                    className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="dashboard-info-title"
                 >
                     <div className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
                         {/* Header */}
-                        <div className="border-b border-gray-100 px-6 py-5">
+                        <div className="border-b border-green-100 px-6 py-5">
                             <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-100 text-bk-dev">
                                     <Info className="h-6 w-6" />
                                 </div>
 
@@ -368,8 +373,8 @@ const Index: React.FC<DashboardProps> = ({
 
                             <div className="mt-4 space-y-3">
                                 {['Data Simpanan', 'Data Pinjaman', 'Data Angsuran', 'Status Anggota'].map((item) => (
-                                    <div key={item} className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3">
-                                        <AlertTriangle className="h-5 w-5 shrink-0 text-blue-600" />
+                                    <div key={item} className="flex items-center gap-3 rounded-lg bg-green-50 px-4 py-3">
+                                        <AlertTriangle className="h-5 w-5 shrink-0 text-bk-dev" />
 
                                         <span className="text-sm font-medium text-gray-700">{item}</span>
                                     </div>
@@ -391,7 +396,7 @@ const Index: React.FC<DashboardProps> = ({
                     </div>
                 </div>
             )}
-            
+
             <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
                 <div className="max-full mx-auto space-y-6">
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -408,13 +413,12 @@ const Index: React.FC<DashboardProps> = ({
                             action={route('dashboard')}
                             className="flex w-full flex-col gap-2 rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:w-auto sm:flex-row sm:items-center"
                         >
-                            <div className="relative">
-                                <select
-                                    id="filter-bulan"
-                                    name="bulan"
-                                    defaultValue={periode.bulan}
-                                    className="w-full cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pr-10 pl-3 text-sm text-gray-700 outline-none focus:border-gray-400"
-                                >
+                            <Select name="bulan" defaultValue={String(periode.bulan)}>
+                                <SelectTrigger className="w-full sm:w-36">
+                                    <SelectValue placeholder="Pilih bulan" />
+                                </SelectTrigger>
+
+                                <SelectContent>
                                     {[
                                         'Januari',
                                         'Februari',
@@ -429,44 +433,35 @@ const Index: React.FC<DashboardProps> = ({
                                         'November',
                                         'Desember',
                                     ].map((nama, index) => (
-                                        <option key={nama} value={index + 1}>
+                                        <SelectItem key={nama} value={String(index + 1)}>
                                             {nama}
-                                        </option>
+                                        </SelectItem>
                                     ))}
-                                </select>
+                                </SelectContent>
+                            </Select>
 
-                                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                            </div>
+                            <Select name="tahun" defaultValue={String(periode.tahun)}>
+                                <SelectTrigger className="w-full sm:w-28">
+                                    <SelectValue placeholder="Pilih tahun" />
+                                </SelectTrigger>
 
-                            <div className="relative">
-                                <select
-                                    id="filter-tahun"
-                                    name="tahun"
-                                    defaultValue={periode.tahun}
-                                    className="w-full cursor-pointer appearance-none rounded-lg border border-gray-200 bg-white py-2 pr-10 pl-3 text-sm text-gray-700 outline-none focus:border-gray-400"
-                                >
+                                <SelectContent>
                                     {pilihan_tahun.map((tahun) => (
-                                        <option key={tahun} value={tahun}>
+                                        <SelectItem key={tahun} value={String(tahun)}>
                                             {tahun}
-                                        </option>
+                                        </SelectItem>
                                     ))}
-                                </select>
-                                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-gray-500" />
-                            </div>
-                            <button
-                                type="submit"
-                                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
-                            >
+                                </SelectContent>
+                            </Select>
+
+                            <Button type="submit" className="gap-2 cursor-pointer">
                                 <Clock3 className="h-4 w-4" />
                                 Terapkan
-                            </button>
+                            </Button>
 
-                            <a
-                                href={route('dashboard')}
-                                className="inline-flex items-center justify-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-                            >
-                                Reset
-                            </a>
+                            <Button type="button" variant="outline" className='cursor-pointer' asChild>
+                                <a href={route('dashboard')}>Reset</a>
+                            </Button>
                         </form>
                     </div>
 
@@ -485,6 +480,20 @@ const Index: React.FC<DashboardProps> = ({
                             value={formatNumber(total_anggota)}
                             description={`${formatNumber(anggota_baru_bulan_ini)} anggota baru bulan ini`}
                             icon={<Users className="h-5 w-5" />}
+                            action={
+                                <a
+                                    href={route('userManagement.index', {
+                                        bulan: periode.bulan,
+                                        tahun: periode.tahun,
+                                    })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs leading-5 font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                    Lihat
+                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                </a>
+                            }
                         />
 
                         <StatCard
@@ -492,6 +501,20 @@ const Index: React.FC<DashboardProps> = ({
                             value={formatNumber(pinjaman.aktif)}
                             description={`Sisa ${formatRupiah(pinjaman.total_sisa)}`}
                             icon={<CreditCard className="h-5 w-5" />}
+                            action={
+                                <a
+                                    href={route('pinjaman.index', {
+                                        status: 'aktif',
+                                        statusUser: 'all',
+                                    })}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs leading-5 font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                >
+                                    Lihat
+                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                </a>
+                            }
                         />
 
                         <StatCard
@@ -499,8 +522,6 @@ const Index: React.FC<DashboardProps> = ({
                             value={formatRupiah(angsuran.jumlah_tunggakan)}
                             description={`${formatNumber(angsuran.tunggakan)} angsuran terlambat`}
                             icon={<AlertTriangle className="h-5 w-5" />}
-                            // trend={angsuran.tunggakan > 0 ? 'down' : 'up'}
-                            // trendText={angsuran.tunggakan > 0 ? 'Perlu perhatian' : 'Tidak ada tunggakan'}
                         />
                     </div>
 
@@ -715,15 +736,16 @@ const Index: React.FC<DashboardProps> = ({
                         </div>
                     </div>
 
-                    <div className="grid gap-6 lg:grid-cols-3">
-                        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
+                    {/* <div className="grid gap-6 lg:grid-cols-3"> */}
+                    <div className="grid items-stretch gap-6 lg:grid-cols-3">
+                        <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
                             <div className="mb-6">
                                 <h2 className="font-semibold text-gray-900">Arus Kas</h2>
 
                                 <p className="mt-1 text-sm text-gray-500">Kas masuk dan keluar bulan {periode.nama_bulan}</p>
                             </div>
 
-                            <div className="h-80 w-full">
+                            <div className="min-h-80 w-full flex-1">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart
                                         data={grafik_kas}
@@ -756,6 +778,7 @@ const Index: React.FC<DashboardProps> = ({
                                             strokeWidth={2}
                                             fillOpacity={0.15}
                                         />
+
                                         <Area
                                             type="monotone"
                                             dataKey="keluar"
@@ -770,14 +793,14 @@ const Index: React.FC<DashboardProps> = ({
                             </div>
                         </div>
 
-                        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <div className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
                             <div>
                                 <h2 className="font-semibold text-gray-900">Komposisi Simpanan</h2>
 
                                 <p className="mt-1 text-sm text-gray-500">Total saldo simpanan</p>
                             </div>
 
-                            <div className="relative mt-4 h-57.5">
+                            <div className="relative mt-4 min-h-56 w-full flex-1">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <PieChart>
                                         <Pie
@@ -790,12 +813,12 @@ const Index: React.FC<DashboardProps> = ({
                                         >
                                             {dataSimpanan.map((_, index) => {
                                                 const colors = [
-                                                    '#3B82F6', // Biru
-                                                    '#10B981', // Hijau
-                                                    '#F59E0B', // Oranye
-                                                    '#8B5CF6', // Ungu
-                                                    '#EF4444', // Merah
-                                                    '#06B6D4', // Cyan
+                                                    '#3B82F6',
+                                                    '#10B981',
+                                                    '#F59E0B',
+                                                    '#8B5CF6',
+                                                    '#EF4444',
+                                                    '#06B6D4',
                                                 ];
 
                                                 return (
@@ -830,7 +853,7 @@ const Index: React.FC<DashboardProps> = ({
 
                                 <MoneyRow label="Simpanan Modal" value={total_simpanan_modal} />
 
-                                {total_penarikan > 0 && <MoneyRow label="Total Penarikan" value={-total_penarikan} />}
+                                {total_penarikan && <MoneyRow label="Total Penarikan" value={-total_penarikan} />}
                             </div>
                         </div>
                     </div>

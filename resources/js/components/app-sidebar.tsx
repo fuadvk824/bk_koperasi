@@ -64,15 +64,33 @@ export function AppSidebar() {
         },
         {
             title: 'Data Simpanan',
-            href: '/simpanan',
             icon: PiggyBank,
             roles: ['super-admin', 'admin', 'trial-user'],
+            children: [
+                {
+                    title: 'Simpanan Anggota',
+                    href: '/simpanan',
+                },
+                {
+                    title: 'Simpanan Approval',
+                    href: '/simpanan/approval',
+                },
+            ],
         },
         {
             title: 'Data Pinjaman',
-            href: '/pinjaman',
             icon: HandCoins,
             roles: ['super-admin', 'admin', 'trial-user'],
+            children: [
+                {
+                    title: 'Pinjaman Anggota',
+                    href: '/pinjaman',
+                },
+                {
+                    title: 'Pinjaman Approval',
+                    href: '/pinjaman/approval',
+                },
+            ],
         },
         {
             title: 'Data Angsuran',
@@ -145,7 +163,8 @@ export function AppSidebar() {
         <Sidebar
             collapsible="icon"
             variant="inset"
-            className={`${bg === 'gradient' ? 'bg-transparent [&_*]:bg-transparent' : ''}`}
+            // className={`${bg === 'gradient' ? 'bg-transparent [&_*]:bg-transparent' : ''}`}
+            className="bg-transparent [&_*]:bg-transparent"
         >
             <SidebarHeader className="bg-transparent">
                 <SidebarMenu>

@@ -40,7 +40,7 @@
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
-        <title>Koperasi Sejahtera</title>
+        <!-- <title>Koperasi Sejahtera</title> -->
         <x-inertia::head>
             <title>{{ config('app.name', 'Koperasi') }}</title>
         </x-inertia::head>

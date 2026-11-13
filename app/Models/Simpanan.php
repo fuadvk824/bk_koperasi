@@ -16,7 +16,8 @@ class Simpanan extends Model
         'jenis',
         'jumlah',
         'tanggal',
-        'status',
+        'status_approval',
+        'catatan_approval',
         'bukti_transfer',
     ];
 

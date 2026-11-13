@@ -15,7 +15,7 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::attempt($validated)) {
+        if (!Auth::attempt($validated)) {
             return response()->json([
                 'message' => 'Email atau password salah.',
             ], 401);
@@ -24,6 +24,17 @@ class AuthController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        // Cek status keanggotaan
+        if ($user->status !== 'active') {
+            Auth::logout();
+
+            return response()->json([
+                'message' => 'Akun Anda belum aktif. Silakan hubungi administrator koperasi.',
+                'status' => $user->status,
+            ], 403);
+        }
+
+        // Buat token hanya untuk anggota aktif
         $token = $user->createToken('mobile_app')->plainTextToken;
 
         return response()->json([
@@ -58,7 +69,6 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        // Hapus token yang sedang digunakan perangkat ini saja.
         $request->user()->currentAccessToken()?->delete();
 
         return response()->json([

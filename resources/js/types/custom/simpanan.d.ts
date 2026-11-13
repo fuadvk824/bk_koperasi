@@ -1,8 +1,11 @@
-
-export type Simpanan = {
+export interface Simpanan {
     id: number;
     user_id: number;
-    jenis: 'wajib' | 'sukarela';
+    nama_user: string;
+    jenis: string;
     jumlah: number;
     tanggal: string;
-};
+    status_approval: 'menunggu' | 'disetujui' | 'ditolak';
+    catatan_approval?: string;
+    bukti_transfer: string;
+}

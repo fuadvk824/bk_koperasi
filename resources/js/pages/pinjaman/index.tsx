@@ -20,6 +20,8 @@ import { formatRupiah } from '@/lib/formatRupiah';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Pinjaman } from '@/types/custom/pinjaman';
+import { PaginationMeta } from '@/types/custom/pagination';
 
 interface Option {
     id: number;
@@ -27,7 +29,10 @@ interface Option {
 }
 
 interface Props {
-    pinjaman: any;
+    pinjaman: {
+        data: Pinjaman[];
+        meta: PaginationMeta;
+    };
     filters: {
         search?: string;
         start_date?: string;

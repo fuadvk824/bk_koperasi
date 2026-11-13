@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import type { VisibilityState } from '@tanstack/react-table';
 
@@ -35,6 +35,7 @@ interface Props {
         bulan?: string | number;
         tahun?: string | number;
         status?: string;
+        status_approval?: string;
         office_id?: number;
         statusPinjaman: string;
         perPage?: number;
@@ -54,24 +55,18 @@ export default function Index({
     keuntunganBunga,
 }: Props) {
     const route = useRoute();
+    const { auth } = usePage().props as any;
+    const trial = auth?.roles?.some((r: string) => r === 'trial-user');
 
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // const [localFilters, setLocalFilters] = useState({
-    //     search: filters.search ?? '',
-    //     start_date: filters.start_date ?? '',
-    //     end_date: filters.end_date ?? '',
-    //     status: filters.status,
-    //     office_id: filters.office_id ?? '',
-    //     statusPinjaman: filters.statusPinjaman ?? '',
-    //     perPage: filters.perPage ?? 10,
-    // });
     const [localFilters, setLocalFilters] = useState({
         search: filters.search ?? '',
         bulan: filters.bulan?.toString() ?? '',
         tahun: filters.tahun?.toString() ?? '',
         status: filters.status ?? '',
+        status_approval: filters.status ?? '',
         office_id: filters.office_id?.toString() ?? '',
         statusPinjaman: filters.statusPinjaman ?? '',
         perPage: filters.perPage ?? 10,
@@ -83,7 +78,7 @@ export default function Index({
         exportRoute: 'angsuran.export',
         allColumns: ['angsuran_ke', 'status'],
     });
- 
+
     const handleResetFilters = () => {
         setIsRefreshing(true);
 
@@ -92,6 +87,7 @@ export default function Index({
             bulan: '',
             tahun: '',
             status: '',
+            status_approval: '',
             office_id: '',
             statusPinjaman: '',
             perPage: 10,
@@ -201,6 +197,25 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </div>
+                        
+                        <div>
+                            <Label>Status Pengajuan</Label>
+                            <Select
+                                value={localFilters.status_approval ?? 'all'}
+                                onValueChange={(value) => handleFilterChange(localFilters, setLocalFilters, 'status', value)}
+                            >
+                                <SelectTrigger className="h-7 w-full p-4">
+                                    <SelectValue placeholder="Pilih Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Status</SelectItem>
+                                    <SelectItem value="belum_diajukan">Belum diajukan</SelectItem>
+                                    <SelectItem value="menunggu">Menunggu</SelectItem>
+                                    <SelectItem value="disetujui">Disetujui</SelectItem>
+                                    <SelectItem value="ditolak">Ditolak</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
 
                         <div>
                             <Label>Bulan Angsuran</Label>
@@ -258,20 +273,17 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </div>
-
-                       
                     </div>
                 </div>
 
                 <DataTable
-                    columns={columnAngsuran()}
+                    columns={columnAngsuran(trial)}
                     data={angsuran.data}
                     meta={angsuran.meta}
                     columnVisibility={columnVisibility}
                     onColumnVisibilityChange={setColumnVisibility}
                     perPage={localFilters.perPage}
                     onPerPageChange={(val) => handleFilterChange(localFilters, setLocalFilters, 'perPage', val)}
-                
                 />
             </div>
         </AppLayout>

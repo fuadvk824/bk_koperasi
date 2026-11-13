@@ -139,19 +139,20 @@ function SidebarProvider({
             ...style,
           } as React.CSSProperties
         }
+
         // className={cn(
-        //   "group/sidebar-wrapper bg-gradient-to-br from-background to-bk-dev flex h-svh w-full",
+        //   "group/sidebar-wrapper flex w-full",
+        //   bg === "gradient"
+        //     ? "min-h-svh bg-gradient-to-br from-background to-bk-dev"
+        //     : "has-data-[variant=inset]:bg-sidebar min-h-svh",
         //   className
         // )}
 
         className={cn(
-          "group/sidebar-wrapper flex w-full",
-          bg === "gradient"
-            ? "min-h-svh bg-gradient-to-br from-background to-bk-dev"
-            : "has-data-[variant=inset]:bg-sidebar min-h-svh",
-          className
+            "group/sidebar-wrapper flex min-h-svh w-full",
+            "bg-gradient-to-br from-[#020617] via-[#065F46] to-[#10B981]",
+            className
         )}
-
         // className={cn(
         //   "group/sidebar-wrapper has-data-[variant=inset]:bg-sidebar flex min-h-svh w-full",
         //   className

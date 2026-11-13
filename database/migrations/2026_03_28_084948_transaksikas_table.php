@@ -58,4 +58,3 @@ return new class extends Migration {
         Schema::dropIfExists('transaksi_kas');
     }
 };
-

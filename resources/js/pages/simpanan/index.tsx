@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 
 import type { PaginationMeta } from '@/types/custom/pagination';
-import { columnSimpanan } from './column-simpanan';
 import { useTableActions } from '@/lib/useTableAction';
 import { Label } from '@/components/ui/label';
 import { CalendarIcon, FilePlus, FileSpreadsheet, RefreshCw } from 'lucide-react';
@@ -23,6 +22,7 @@ import { format } from 'date-fns';
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { id } from 'date-fns/locale';
+import { columnSimpanan } from './column-simpanan';
 
 interface Option {
     id: number;
@@ -269,6 +269,7 @@ export default function Index({
                                 </SelectContent>
                             </Select>
                         </div>
+                    
                         <div>
                             <Label>Status Anggota</Label>
                             <Select value={localFilters.statusUser ?? 'active'} onValueChange={handleStatusUserChange}>
@@ -526,7 +527,7 @@ export default function Index({
                 </Dialog>
 
                 <DataTable
-                    columns={columnSimpanan(openEdit, trial)}
+                    columns={columnSimpanan}
                     data={simpanan.data}
                     meta={simpanan.meta}
                     columnVisibility={columnVisibility}

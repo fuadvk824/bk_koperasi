@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Web\UserResource;
+use App\Mail\UserPasswordResetMail;
 use App\Models\ActivityLog;
 use App\Models\Office;
 use App\Models\PengaturanKoperasi;
@@ -13,13 +14,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Models\Role;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
-
-
     public function index(Request $request)
     {
         $perPage = $request->input('perPage', 10);
@@ -45,14 +46,14 @@ class UserController extends Controller
                 $request->filled('status') && $request->status !== 'all',
                 fn($q) => $q->where('status', $request->status)
             )
-            // User sudah aktif sebelum atau selama bulan terpilih
+            // Hanya anggota yang active_at-nya berada pada bulan terpilih
             ->whereNotNull('active_at')
-            ->whereDate('active_at', '<=', $akhirBulan)
+            ->whereBetween('active_at', [$awalBulan, $akhirBulan])
 
-            // User belum nonaktif pada awal bulan terpilih
-            ->where(function ($q) use ($awalBulan) {
+            // Anggota masih aktif sampai akhir bulan terpilih
+            ->where(function ($q) use ($akhirBulan) {
                 $q->whereNull('inactive_at')
-                    ->orWhereDate('inactive_at', '>=', $awalBulan);
+                    ->orWhereDate('inactive_at', '>', $akhirBulan);
             })
             ->orderBy('name', 'asc');
 
@@ -191,7 +192,6 @@ class UserController extends Controller
         return $data;
     }
 
-
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -257,8 +257,6 @@ class UserController extends Controller
         );
     }
 
-
-
     public function update(Request $request, User $user)
     {
         $admin = Auth::user();
@@ -283,7 +281,6 @@ class UserController extends Controller
 
         if ($isSuperAdmin) {
             $rules['role'] = ['required', 'exists:roles,name'];
-            $rules['password'] = ['nullable', 'string', 'min:8'];
         }
 
         $validated = $request->validate($rules);
@@ -296,14 +293,152 @@ class UserController extends Controller
             ]);
         }
 
-        // Lanjutkan kode DB::transaction() Anda yang sekarang.
+        DB::transaction(function () use (
+            $user,
+            $validated,
+            $statusBerubah,
+            $isSuperAdmin
+        ) {
+
+            // Simpan data lama untuk ActivityLog
+            $oldRole = $user->getRoleNames()->first();
+
+            $oldData = [
+                'office_id' => $user->office_id,
+                'status' => $user->status,
+                'active_at' => $user->active_at,
+                'inactive_at' => $user->inactive_at,
+                'role' => $oldRole,
+            ];
+
+            // Update Office
+            $user->office_id = $validated['office_id'];
+
+            // Update Status
+            if ($statusBerubah) {
+                $user->status = $validated['status'];
+
+                if ($validated['status'] === 'inactive') {
+                    $user->inactive_at = $validated['tanggal_status'];
+                } else {
+                    $user->active_at = $validated['tanggal_status'];
+                    $user->inactive_at = null;
+                }
+            }
+
+            // Khusus Super Admin
+            if ($isSuperAdmin) {
+
+                // Update Role
+                $user->syncRoles([$validated['role']]);
+            }
+
+            // Simpan User
+            $user->save();
+
+            // Data baru untuk ActivityLog
+            $newData = [
+                'office_id' => $user->office_id,
+                'status' => $user->status,
+                'active_at' => $user->active_at,
+                'inactive_at' => $user->inactive_at,
+                'role' => $user->getRoleNames()->first(),
+            ];
+
+            // ActivityLog hanya dibuat jika perubahan dilakukan bukan oleh Super Admin
+            if (!$isSuperAdmin && $oldData != $newData) {
+                ActivityLog::create([
+                    'by_admin' => Auth::id(),
+                    'user_id' => $user->id,
+                    'jenis_update' => 'Update User',
+                    'old' => json_encode($oldData),
+                    'new' => json_encode($newData),
+                ]);
+            }
+        });
+
+        return back()->with(
+            'success',
+            'User berhasil diperbarui.'
+        );
     }
 
+
+    private function isValidEmailDomain($email)
+    {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        $domain = substr(strrchr($email, '@'), 1);
+
+        $blockedDomains = [
+            'example.com',
+            'test.com',
+            'invalid.com',
+            'localhost',
+        ];
+
+        if (in_array(strtolower($domain), $blockedDomains)) {
+            return false;
+        }
+
+        $mxRecords = dns_get_record($domain, DNS_MX);
+
+        return !empty($mxRecords);
+    }
+
+    public function resetPassword(User $user)
+    {
+        /** @var \App\Models\User|null $admin */
+        $admin = Auth::user();
+
+        if (!$admin->hasRole('super-admin')) {
+            abort(403, 'Anda tidak memiliki akses untuk reset password.');
+        }
+
+        // Validasi email
+        if (!$this->isValidEmailDomain($user->email)) {
+            return back()->with(
+                'error',
+                'Email tidak valid atau domain email tidak menerima email.'
+            );
+        }
+
+        // Generate password random 6 karakter
+        $plainPassword = Str::random(6);
+
+        try {
+            DB::transaction(function () use ($user, $plainPassword) {
+
+                // Simpan password baru dalam bentuk hash
+                $user->password = Hash::make($plainPassword);
+                $user->save();
+
+                // Kirim password baru ke email user
+                Mail::to($user->email)->send(
+                    new UserPasswordResetMail($user, $plainPassword)
+                );
+            });
+
+            return back()->with(
+                'success',
+                'Password berhasil direset dan dikirim ke email user.'
+            );
+        } catch (\Throwable $e) {
+
+            report($e);
+
+            return back()->with(
+                'error',
+                'Terjadi kesalahan saat reset password atau mengirim email.'
+            );
+        }
+    }
 
 
     private function generateNomorAnggota(): string
     {
-        // Kunci satu baris users sebagai pengunci bersama.
         $pengunci = User::query()
             ->orderBy('id')
             ->lockForUpdate()
@@ -315,7 +450,6 @@ class UserController extends Controller
             );
         }
 
-        // Cari nomor anggota dengan urutan terbesar.
         $nomorTerakhir = User::query()
             ->whereNotNull('nomor_anggota')
             ->orderByRaw("

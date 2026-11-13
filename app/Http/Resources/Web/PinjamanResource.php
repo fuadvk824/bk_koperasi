@@ -14,12 +14,8 @@ class PinjamanResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user' => $this->whenLoaded('user', function () {
-                return [
-                    'id' => $this->user->id,
-                    'name' => $this->user->name,
-                ];
-            }),
+            'user_id' => $this->user_id,
+            'name' => $this->user?->name,
 
             'jumlah_pinjaman' => $this->jumlah_pinjaman,
             'total_pinjaman' => $this->total_pinjaman,
@@ -28,12 +24,16 @@ class PinjamanResource extends JsonResource
             'angsuran_bulan_terakhir' => $this->angsuran_bulan_terakhir,
 
             'bunga_persen' => (float) $this->bunga_persen,
-            'lama_angsuran' => $this->lama_angsuran, 
+            'lama_angsuran' => $this->lama_angsuran,
 
             'tanggal_pinjaman' => $this->tanggal_pinjaman->format('Y-m-d'),
-            'jatuh_tempo_terakhir' => $this->jatuh_tempo_terakhir?->format('Y-m-d'), 
+            'jatuh_tempo_terakhir' => $this->jatuh_tempo_terakhir?->format('Y-m-d'),
 
             'status' => $this->status,
+            'status_approval' => $this->status_approval,
+            'surat_pengajuan' => $this->surat_pengajuan
+                ? asset('storage/' . $this->surat_pengajuan)
+                : null,
         ];
     }
 }

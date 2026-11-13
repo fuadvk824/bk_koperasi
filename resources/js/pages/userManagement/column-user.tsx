@@ -1,7 +1,7 @@
 import { ColumnDef } from '@tanstack/react-table';
 
 import { UserManagement } from '@/types/custom/usermanagement';
-import { SquarePen } from 'lucide-react';
+import { KeyRound, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -20,7 +20,7 @@ const formatDate = (date: string | null | undefined) => {
     return `${day}-${month}-${year}`;
 };
 
-export const columnUser = (onEdit: any, isSuperAdmin: boolean): ColumnDef<UserManagement>[] => {
+export const columnUser = (onEdit: any, isSuperAdmin: boolean, onResetPassword: any): ColumnDef<UserManagement>[] => {
     const columns: ColumnDef<UserManagement>[] = [
         {
             id: 'nomor',
@@ -98,15 +98,25 @@ export const columnUser = (onEdit: any, isSuperAdmin: boolean): ColumnDef<UserMa
                 const isSuperAdminRow = data.roles?.some((r: any) => r.name === 'super-admin');
 
                 return (
-                    <Button
-                        size="sm"
-                        disabled={isSuperAdminRow}
-                        onClick={() => onEdit(data)}
-                        className="cursor-pointer hover:scale-105"
-                    >
-                        <SquarePen size={16} className="mr-1" />
-                        Edit
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button size="sm" disabled={isSuperAdminRow} onClick={() => onEdit(data)} className="cursor-pointer">
+                            <SquarePen size={16} className="mr-1" />
+                            Edit
+                        </Button>
+
+                        {isSuperAdmin && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isSuperAdminRow}
+                                onClick={() => onResetPassword(data)}
+                                className="cursor-pointer"
+                            >
+                                <KeyRound size={16} className="mr-1" />
+                                Reset Password
+                            </Button>
+                        )}
+                    </div>
                 );
             },
         },

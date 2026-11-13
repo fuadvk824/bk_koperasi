@@ -6,15 +6,16 @@ use App\Http\Controllers\Web\AngsuranController;
 use App\Http\Controllers\Web\BerandaController;
 use App\Http\Controllers\Web\DevAktiflamaDatabaruController;
 use App\Http\Controllers\Web\DevInactiveNodataController;
+use App\Http\Controllers\Web\PinjamanApprovalController;
 use App\Http\Controllers\Web\PinjamanController;
 use App\Http\Controllers\Web\RiwayatAktivitasController;
+use App\Http\Controllers\Web\SimpananApprovalController;
 use App\Http\Controllers\Web\SimpananController;
 use App\Http\Controllers\Web\SimpananDuplikatController;
 use App\Http\Controllers\Web\TransaksiKasController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\UserPreferenceController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
 Route::inertia('/', 'welcome', [
@@ -26,15 +27,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/user/bg', [UserPreferenceController::class, 'show']);
     Route::post('/user/bg', [UserPreferenceController::class, 'update']);
 
-    Route::middleware(['role:user'])->group(function () {
-        Route::prefix('dashboardKoperasi')
-            ->name('dashboardKoperasi.')
-            ->group(function () {
-                Route::get('/', function () {
-                    return Inertia::render('member/index');
-                })->name('index');
-            });
-    });
     Route::middleware(['role:super-admin|admin'])->group(function () {
         Route::prefix('userManagement')
             ->name('userManagement.')
@@ -49,18 +41,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     '/pengaturan-koperasi',
                     [UserController::class, 'updatePengaturanKoperasi']
                 )->name('pengaturanKoperasi.update');
+                Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])
+                    ->name('resetPassword');
             });
     });
     Route::middleware(['role:super-admin|admin|trial-user'])->group(function () {
         Route::get('/dashboard', [BerandaController::class, 'index'])->name('dashboard');
+
         Route::prefix('simpanan')
             ->name('simpanan.')
             ->group(function () {
                 Route::get('/', [SimpananController::class, 'index'])->name('index');
                 Route::post('/', [SimpananController::class, 'store'])->name('store');
                 Route::put('/{simpanan}', [SimpananController::class, 'update'])->name('update');
-                Route::delete('/{simpanan}', [SimpananController::class, 'destroy'])->name('destroy');
+               
+
+                Route::patch('/{simpanan}/status', [SimpananApprovalController::class, 'updateStatus',])->name('updateStatus');
+
+                Route::get('/approval', [
+                    SimpananApprovalController::class,
+                    'index',
+                ])->name('approval.index');
             });
+
         Route::prefix('anggota')
             ->name('anggota.')
             ->group(function () {
@@ -77,6 +80,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 Route::post('/', [PinjamanController::class, 'store'])->name('store');
                 Route::put('/{pinjaman}', [PinjamanController::class, 'update'])->name('update');
                 Route::delete('/{pinjaman}', [PinjamanController::class, 'destroy'])->name('destroy');
+
+                Route::patch('/{pinjaman}/status_approval', [PinjamanApprovalController::class, 'updateStatus',])->name('updateStatus');
+
+                Route::get('/approval', [
+                    PinjamanApprovalController::class,
+                    'index',
+                ])->name('approval.index');
+                Route::get('/{pinjaman}/pdf', [PinjamanApprovalController::class, 'pdf'])
+                    ->name('pdf');
             });
 
         Route::prefix('angsuran')
@@ -84,6 +96,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->group(function () {
                 Route::get('/', [AngsuranController::class, 'index'])->name('index');
                 Route::patch('/{angsuran}/status', [AngsuranController::class, 'updateStatus'])->name('updateStatus');
+                Route::patch('/{angsuran}/reject', [AngsuranController::class, 'reject'])->name('reject');
             });
 
         Route::prefix('transaksikas')

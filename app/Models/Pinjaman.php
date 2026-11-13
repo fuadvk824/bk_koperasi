@@ -23,6 +23,9 @@ class Pinjaman extends Model
         'tanggal_pinjaman',
         'jatuh_tempo_terakhir',
         'status',
+        'status_approval',
+        'catatan_approval',
+        'surat_pengajuan',
     ];
 
     protected $casts = [

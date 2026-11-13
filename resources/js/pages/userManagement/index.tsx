@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import FormCreate from './form-create';
 import FormPengaturan from './form-pengaturan';
+import { toast } from 'sonner';
 
 interface Option {
     id: number;
@@ -35,12 +36,6 @@ interface Props {
         data: UserManagement[];
         meta: PaginationMeta;
     };
-    // filters: {
-    //     search?: string;
-    //     office_id?: number | string;
-    //     status: string;
-    //     perPage?: number;
-    // };
 
     filters: {
         search?: string;
@@ -111,12 +106,6 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
     const daftarTahun = Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) =>
         String(new Date().getFullYear() - i),
     );
-    // const [localFilters, setLocalFilters] = useState({
-    //     search: filters.search ?? '',
-    //     office_id: filters.office_id ?? '',
-    //     status: filters.status ?? '',
-    //     perPage: filters.perPage ?? 10,
-    // });
 
     const [localFilters, setLocalFilters] = useState({
         search: filters.search ?? '',
@@ -134,20 +123,6 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
         allColumns: ['name', 'email', 'roles'],
     });
 
-    // const handleResetFilters = () => {
-    //     setIsRefreshing(true);
-    //     setLocalFilters({ search: '', perPage: 10, office_id: '', status: '' });
-
-    //     router.get(
-    //         route('userManagement.index'),
-    //         {},
-    //         {
-    //             replace: true,
-    //             onFinish: () => setIsRefreshing(false),
-    //         },
-    //     );
-    // };
-
     const handleResetFilters = () => {
         setIsRefreshing(true);
 
@@ -161,6 +136,34 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
             {
                 replace: true,
                 onFinish: () => setIsRefreshing(false),
+            },
+        );
+    };
+
+    const handleResetPassword = (user: UserManagement) => {
+        const confirmed = window.confirm(
+            `Reset password untuk ${user.name}?\nPassword baru akan dikirim ke email ${user.email}.`,
+        );
+
+        if (!confirmed) return;
+
+        router.post(
+            route('userManagement.resetPassword', user.id),
+            {},
+            {
+                preserveScroll: true,
+                onSuccess: (page: any) => {
+                    const flash = page.props.flash;
+
+                    if (flash?.success) {
+                        toast.success(flash.success);
+                    } else if (flash?.error) {
+                        toast.error(flash.error);
+                    }
+                },
+                onError: () => {
+                    toast.error('Gagal melakukan reset password.');
+                },
             },
         );
     };
@@ -264,7 +267,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Pilih bulan" />
                                     </SelectTrigger>
-                                    <SelectContent align='start'>
+                                    <SelectContent align="start">
                                         {daftarBulan.map((bulan) => (
                                             <SelectItem key={bulan.value} value={bulan.value}>
                                                 {bulan.label}
@@ -283,7 +286,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Pilih tahun" />
                                     </SelectTrigger>
-                                    <SelectContent align='start'>
+                                    <SelectContent align="start">
                                         {daftarTahun.map((tahun) => (
                                             <SelectItem key={tahun} value={tahun}>
                                                 {tahun}
@@ -420,7 +423,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                 </Dialog>
 
                 <DataTable
-                    columns={columnUser(openEdit, isSuperAdmin)}
+                    columns={columnUser(openEdit, isSuperAdmin, handleResetPassword)}
                     data={users.data}
                     meta={users.meta}
                     columnVisibility={columnVisibility}

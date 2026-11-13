@@ -14,23 +14,15 @@ class BerandaController extends Controller
 
         $totalSimpanan = DB::table('simpanan')
             ->where('user_id', $user->id)
+            ->where('status_approval', 'disetujui')
             ->sum('jumlah');
-
-        $totalPinjaman = DB::table('pinjaman')
-            ->where('user_id', $user->id)
-            ->sum('total_pinjaman');
-
-        $sisaPinjaman = DB::table('pinjaman')
-            ->where('user_id', $user->id)
-            ->where('status', 'aktif')
-            ->sum('sisa_pinjaman');
 
         $transaksi = DB::table('transaksi_kas')
             ->where('user_id', $user->id)
             ->where('status', 'berhasil')
             ->orderByDesc('tanggal')
             ->orderByDesc('id')
-            ->limit(10)
+            ->limit(5)
             ->get()
             ->map(function ($item) {
                 return [
@@ -53,10 +45,35 @@ class BerandaController extends Controller
             'ringkasan' => [
                 'total_simpanan' => (float) $totalSimpanan,
                 'shu' => 0,
-                'total_pinjaman' => (float) $totalPinjaman,
-                'sisa_pinjaman' => (float) $sisaPinjaman,
             ],
             'transaksi' => $transaksi,
         ]);
+    }
+
+    public function aktivitas(Request $request)
+    {
+        $user = $request->user();
+
+        $perPage = 5;
+
+        $transaksi = DB::table('transaksi_kas')
+            ->where('user_id', $user->id)
+            ->where('status', 'berhasil')
+            ->orderByDesc('tanggal')
+            ->orderByDesc('id')
+            ->paginate($perPage)
+            ->through(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'judul' => $item->keterangan
+                        ?? ucfirst($item->kategori),
+                    'tanggal' => $item->tanggal,
+                    'jumlah' => (float) $item->jumlah,
+                    'masuk' => $item->jenis === 'masuk',
+                    'kategori' => $item->kategori,
+                ];
+            });
+
+        return response()->json($transaksi);
     }
 }

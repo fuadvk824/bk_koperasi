@@ -31,7 +31,6 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
         office_id: initialData?.office?.id?.toString() ?? '',
         status: initialData?.status ?? 'inactive',
         role: initialData?.roles?.[0]?.name ?? '',
-        password: '',
         tanggal_status: new Date().toISOString().slice(0, 10),
     };
 
@@ -40,33 +39,13 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
 
     const selectedUser = offices.find((u) => u.id === data.office_id);
 
-    // const isDataChanged = () => {
-    //     return (
-    //         String(data.office_id) !== String(initialState.office_id) ||
-    //         String(data.status) !== String(initialState.status) ||
-    //         String(data.role) !== String(initialState.role) ||
-    //         String(data.password) !== String(initialState.password)
-    //     );
-    // };
-
-    // const validate = () => {
-    //     const newErrors: any = {};
-
-    //     if (!data.office_id) newErrors.office_id = 'Office wajib dipilih';
-    //     if (!data.status) newErrors.status = 'Status wajib dipilih';
-    //     if (!data.role) newErrors.role = 'Role wajib dipilih';
-
-    //     setErrors(newErrors);
-    //     return Object.keys(newErrors).length === 0;
-    // };
     const isStatusChanged = data.status !== initialData?.status;
 
     const isDataChanged = () => {
         return (
             String(data.office_id) !== String(initialState.office_id) ||
             String(data.status) !== String(initialState.status) ||
-            String(data.role) !== String(initialState.role) ||
-            String(data.password) !== String(initialState.password)
+            String(data.role) !== String(initialState.role) 
         );
     };
 
@@ -182,6 +161,7 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
 
                 {errors.status && <p className="text-xs text-red-500">{errors.status}</p>}
             </div>
+
             {isStatusChanged && (
                 <div className="space-y-2">
                     <Label>Tanggal Perubahan Status</Label>
@@ -224,17 +204,7 @@ export default function Form({ close, initialData, offices, roles, isSuperAdmin 
 
                         {errors.role && <p className="text-xs text-red-500">{errors.role}</p>}
                     </div>
-                    <div className="space-y-2">
-                        <Label>Password Reset</Label>
-                        <Input
-                            type="password"
-                            placeholder="Kosongkan jika tidak ingin mengubah password"
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            className={cn(errors.password && 'border-red-500')}
-                        />
-                        {errors.password && <p className="text-xs text-red-500">{errors.password}</p>}
-                    </div>
+                    
                 </>
             )}
 
