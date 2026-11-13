@@ -24,11 +24,22 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $perPage = $request->input('perPage', 10);
-        $bulan = (int) ($request->input('bulan') ?: now()->month);
-        $tahun = (int) ($request->input('tahun') ?: now()->year);
+        $bulan = $request->input('bulan', 'all');
+        $tahun = $request->input('tahun', 'all');
 
-        $awalBulan = Carbon::create($tahun, $bulan, 1)->startOfMonth()->toDateString();
-        $akhirBulan = Carbon::create($tahun, $bulan, 1)->endOfMonth()->toDateString();
+        $awalBulan = null;
+        $akhirBulan = null;
+
+        if ($bulan !== 'all' && $tahun !== 'all') {
+            $awalBulan = Carbon::create((int) $tahun, (int) $bulan, 1)
+                ->startOfMonth()
+                ->toDateString();
+
+            $akhirBulan = Carbon::create((int) $tahun, (int) $bulan, 1)
+                ->endOfMonth()
+                ->toDateString();
+        }
+
         $query = User::with(['roles:id,name', 'office:id,name'])
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->search;
@@ -46,14 +57,15 @@ class UserController extends Controller
                 $request->filled('status') && $request->status !== 'all',
                 fn($q) => $q->where('status', $request->status)
             )
-            // Hanya anggota yang active_at-nya berada pada bulan terpilih
-            ->whereNotNull('active_at')
-            ->whereBetween('active_at', [$awalBulan, $akhirBulan])
 
-            // Anggota masih aktif sampai akhir bulan terpilih
-            ->where(function ($q) use ($akhirBulan) {
-                $q->whereNull('inactive_at')
-                    ->orWhereDate('inactive_at', '>', $akhirBulan);
+            // Filter berdasarkan bulan dan tahun jika dipilih
+            ->when($awalBulan && $akhirBulan, function ($q) use ($awalBulan, $akhirBulan) {
+                $q->whereNotNull('active_at')
+                    ->whereBetween('active_at', [$awalBulan, $akhirBulan])
+                    ->where(function ($query) use ($akhirBulan) {
+                        $query->whereNull('inactive_at')
+                            ->orWhereDate('inactive_at', '>', $akhirBulan);
+                    });
             })
             ->orderBy('name', 'asc');
 

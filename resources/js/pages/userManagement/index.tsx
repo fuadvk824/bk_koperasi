@@ -111,8 +111,8 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
         search: filters.search ?? '',
         office_id: filters.office_id?.toString() ?? '',
         status: filters.status ?? '',
-        bulan: String(filters.bulan ?? new Date().getMonth() + 1),
-        tahun: String(filters.tahun ?? new Date().getFullYear()),
+        bulan: String(filters.bulan ?? 'all'),
+        tahun: String(filters.tahun ?? 'all'),
         perPage: filters.perPage ?? 10,
     });
 
@@ -257,7 +257,9 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 </SelectContent>
                             </Select>
                         </div>
+
                         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            {/* Bulan */}
                             <div>
                                 <Label>Bulan Aktif</Label>
                                 <Select
@@ -267,7 +269,10 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Pilih bulan" />
                                     </SelectTrigger>
+
                                     <SelectContent align="start">
+                                        <SelectItem value="all">ALL BULAN</SelectItem>
+
                                         {daftarBulan.map((bulan) => (
                                             <SelectItem key={bulan.value} value={bulan.value}>
                                                 {bulan.label}
@@ -277,6 +282,7 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 </Select>
                             </div>
 
+                            {/* Tahun */}
                             <div>
                                 <Label>Tahun Aktif</Label>
                                 <Select
@@ -286,7 +292,10 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Pilih tahun" />
                                     </SelectTrigger>
+
                                     <SelectContent align="start">
+                                        <SelectItem value="all">ALL TAHUN</SelectItem>
+
                                         {daftarTahun.map((tahun) => (
                                             <SelectItem key={tahun} value={tahun}>
                                                 {tahun}
@@ -296,9 +305,10 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                 </Select>
                             </div>
 
-                            <div className="flex items-end">
+                            {/* Tombol */}
+                            <div className="flex items-end gap-2">
                                 <Button
-                                    className="w-full"
+                                    className="flex-1"
                                     onClick={() =>
                                         router.get(
                                             route('userManagement.index'),
@@ -316,6 +326,28 @@ export default function Index({ users, roles, filters, offices, totalAnggota, ac
                                     }
                                 >
                                     Terapkan Filter
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => {
+                                        const resetFilters = {
+                                            ...localFilters,
+                                            bulan: 'all',
+                                            tahun: 'all',
+                                        };
+
+                                        setLocalFilters(resetFilters);
+
+                                        router.get(route('userManagement.index'), resetFilters, {
+                                            preserveState: true,
+                                            preserveScroll: true,
+                                            replace: true,
+                                        });
+                                    }}
+                                >
+                                    Reset
                                 </Button>
                             </div>
                         </div>
