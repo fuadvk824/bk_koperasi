@@ -1,6 +1,6 @@
+
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="UTF-8">
     <title>Reset Password Akun Koperasi</title>
@@ -12,7 +12,7 @@
             <td align="center">
 
                 <table width="500" cellpadding="0" cellspacing="0"
-                    style="background:#ffffff;border-radius:10px;overflow:hidden;box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                    style="background:#ffffff;border-radius:10px;overflow:hidden;">
 
                     <!-- Header -->
                     <tr>
@@ -69,6 +69,38 @@
                                 password baru untuk mengakses aplikasi.
                             </p>
 
+                            <!-- APK Download Section -->
+                            <table width="100%" cellpadding="0" cellspacing="0"
+                                style="margin:24px 0;background:#eff6ff;border-radius:8px;">
+                                <tr>
+                                    <td align="center" style="padding:20px;">
+
+                                        <h3 style="margin:0 0 10px;color:#1e40af;">
+                                            Download Aplikasi Koperasi
+                                        </h3>
+
+                                        <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 18px;">
+                                            Nikmati kemudahan mengakses layanan
+                                            Koperasi Sejahtera melalui smartphone Android Anda.
+                                            Silakan download dan instal aplikasi melalui tombol berikut.
+                                        </p>
+
+                                        <a href="https://drive.google.com/drive/folders/1OwvG02GgS447KgYDmLYDoNJr0MThNAXx?usp=drive_link"
+                                            style="display:inline-block;background:#2563eb;color:#ffffff;
+                                            text-decoration:none;padding:13px 25px;border-radius:6px;
+                                            font-weight:bold;font-size:14px;">
+                                            DOWNLOAD APLIKASI (APK)
+                                        </a>
+
+                                        <p style="font-size:12px;color:#666;margin:15px 0 0;">
+                                            Khusus perangkat Android.
+                                            Pastikan Anda mengunduh aplikasi dari link resmi koperasi.
+                                        </p>
+
+                                    </td>
+                                </tr>
+                            </table>
+
                             <p style="text-align:justify;">
                                 Apabila Anda mengalami kendala saat login atau merasa tidak mengetahui
                                 proses reset password ini, silakan menghubungi administrator koperasi
@@ -97,5 +129,4 @@
         </tr>
     </table>
 </body>
-
 </html>
