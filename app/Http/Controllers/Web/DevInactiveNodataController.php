@@ -119,7 +119,6 @@ class DevInactiveNodataController extends Controller
 
         $ids = array_map('intval', $validated['ids']);
 
-        // Abaikan ID 1 dan 98 meskipun dicentang di frontend.
         $ids = array_values(array_diff($ids, [1, 98]));
 
         // Jika semua ID yang dipilih adalah ID yang dikecualikan.

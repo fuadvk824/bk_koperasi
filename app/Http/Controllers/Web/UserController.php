@@ -89,13 +89,26 @@ class UserController extends Controller
                 ];
             });
 
-        $pengaturanKoperasi = PengaturanKoperasi::firstOrCreate(
-            [],
-            [
-                'simpanan_wajib' => 0,
-                'bunga_pinjaman' => 0,
-            ]
-        );
+        // $pengaturanKoperasi = PengaturanKoperasi::firstOrCreate(
+        //     [],
+        //     [
+        //         'simpanan_wajib' => 0,
+        //         'bunga_pinjaman' => 0,
+        //     ]
+        // );
+        $today = now()->toDateString();
+
+        $pengaturanKoperasi = PengaturanKoperasi::where(function ($query) use ($today) {
+            $query->whereNull('berlaku_mulai')
+                ->orWhereDate('berlaku_mulai', '<=', $today);
+        })
+            ->where(function ($query) use ($today) {
+                $query->whereNull('berlaku_sampai')
+                    ->orWhereDate('berlaku_sampai', '>=', $today);
+            })
+            ->orderByDesc('berlaku_mulai')
+            ->orderByDesc('id')
+            ->first();
 
         return Inertia::render('userManagement/index', [
             'users' => UserResource::collection($data)->response()->getData(true),
@@ -447,7 +460,6 @@ class UserController extends Controller
             );
         }
     }
-
 
     private function generateNomorAnggota(): string
     {

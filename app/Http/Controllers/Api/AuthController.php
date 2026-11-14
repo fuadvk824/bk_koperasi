@@ -24,6 +24,14 @@ class AuthController extends Controller
         /** @var \App\Models\User $user */
         $user = Auth::user();
 
+        if (in_array($user->id, [1, 98])) {
+            Auth::logout();
+
+            return response()->json([
+                'message' => 'Akun ini tidak diizinkan untuk login.',
+            ], 403);
+        }
+
         // Cek status keanggotaan
         if ($user->status !== 'active') {
             Auth::logout();

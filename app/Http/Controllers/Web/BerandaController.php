@@ -197,7 +197,7 @@ class BerandaController extends Controller
          | ANGSURAN
          |_________________________________________________*/
         $jadwalAngsuranBulanIni = Angsuran::query()
-            ->where('status_approval', 'disetujui')
+            // ->where('status_approval', 'disetujui')
             ->where('bulan', $bulan)
             ->where('tahun', $tahun)
             ->get();
@@ -235,7 +235,7 @@ class BerandaController extends Controller
         );
 
         $angsuranTunggakan = Angsuran::query()
-            ->where('status_approval', 'disetujui')
+            // ->where('status_approval', 'disetujui')
             ->where(function ($query) {
                 $query->whereNull('tanggal_bayar')
                     ->orWhere('status', 'belum_bayar');

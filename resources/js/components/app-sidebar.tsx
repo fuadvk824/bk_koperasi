@@ -131,10 +131,7 @@ export function AppSidebar() {
                     title: 'Nonaktif Tanpa Data',
                     href: '/inactive-nodata',
                 },
-                {
-                    title: 'Simpanan Duplikat',
-                    href: '/simpanan-duplikat',
-                },
+                 
             ],
         },
     ];

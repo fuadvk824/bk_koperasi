@@ -129,16 +129,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     [DevInactiveNodataController::class, 'bulkDestroy']
                 )->name('inactive-nodata.bulk-destroy');
 
-
-                Route::get(
-                    '/simpanan-duplikat',
-                    [SimpananDuplikatController::class, 'index']
-                )->name('simpanan-duplikat.index');
-
-                Route::patch(
-                    '/simpanan-duplikat/{simpanan}/pindah-bulan',
-                    [SimpananDuplikatController::class, 'update']
-                )->name('simpanan-duplikat.pindah-bulan');
             });
     });
 });
